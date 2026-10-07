@@ -1,5 +1,8 @@
 # Thread parallelization regression checks
 
+For per-RWG CFIE coefficients and open-surface enforcement, see
+[README_CFIE.md](README_CFIE.md).
+
 Run from the repository root:
 
 ```sh

@@ -1,3 +1,4 @@
+#include "solver_globals.h"
 #include <stdio.h>
 #include <complex>
 #include <chrono>
@@ -25,7 +26,6 @@ extern double *rwg_lengths;
 extern double *node_pos;
 extern int *rwg_nodes;
 extern int *rwg_tris;
-extern double val_cfiealpha;
 extern double *vec_trinormals;
 extern int *trans_index;
 extern complex<double> *trans_op;
@@ -34,7 +34,6 @@ extern complex<double> *disaggregation;
 extern int parallel_omp_on;
 extern int num_threads;
 extern FILE *file_timer;
-extern double *rwg_media; 
 
 void phi_locations_weights(int,double*,double*);
 void theta_locations_weights(int,double*,double*);
@@ -605,12 +604,12 @@ void mvm_Zfardotx(complex<double> x[], complex<double> y[]){
                             expfactor=exp(i*val_kO*dotval);
                             testreceivingtheta=costheta[indtheta]*cosphi[indphi]*testvector[0]+costheta[indtheta]*sinphi[indphi]*testvector[1]-sintheta[indtheta]*testvector[2];
                             testreceivingphi=-sinphi[indphi]*testvector[0]+cosphi[indphi]*testvector[1];
-                            val_integral+=disaggregation[inddisagg]*val_cfiealpha*testsign*testlength*expfactor*testreceivingtheta/2.0;
-                            val_integral+=disaggregation[inddisagg+1]*val_cfiealpha*testsign*testlength*expfactor*testreceivingphi/2.0;
+                            val_integral+=disaggregation[inddisagg]*cfiealpha*testsign*testlength*expfactor*testreceivingtheta/2.0;
+                            val_integral+=disaggregation[inddisagg+1]*cfiealpha*testsign*testlength*expfactor*testreceivingphi/2.0;
                             testreceivingtheta=costheta[indtheta]*cosphi[indphi]*ncrosstestvector[0]+costheta[indtheta]*sinphi[indphi]*ncrosstestvector[1]-sintheta[indtheta]*ncrosstestvector[2];
                             testreceivingphi=-sinphi[indphi]*ncrosstestvector[0]+cosphi[indphi]*ncrosstestvector[1];
-                            val_integral-=disaggregation[inddisagg]*(1-val_cfiealpha)*testsign*testlength*expfactor*testreceivingphi/2.0;
-                            val_integral+=disaggregation[inddisagg+1]*(1-val_cfiealpha)*testsign*testlength*expfactor*testreceivingtheta/2.0;
+                            val_integral-=disaggregation[inddisagg]*(1-cfiealpha)*testsign*testlength*expfactor*testreceivingphi/2.0;
+                            val_integral+=disaggregation[inddisagg+1]*(1-cfiealpha)*testsign*testlength*expfactor*testreceivingtheta/2.0;
                             inddisagg++;
                             inddisagg++;
                         }

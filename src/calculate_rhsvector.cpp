@@ -1,3 +1,4 @@
+#include "solver_globals.h"
 #include <stdio.h>
 #include <complex>
 #include <chrono>
@@ -9,14 +10,12 @@ using namespace std::chrono;
 
 extern double pi;
 extern double val_etaO;
-extern double val_cfiealpha;
 extern double val_kO;
 extern int source_type;
 extern complex<double> *source_CSP;
 extern complex<double> *source_current;
 extern complex<double> *source_DG;
 extern double *source_dipole;
-extern double *source_PW;
 extern double val_epsilonO;
 extern double *vec_trinormals;
 extern double val_muO;
@@ -31,7 +30,6 @@ extern int *tri_nodes;
 extern int *tri2rwgindex;
 extern int *tri2rwgnode;
 extern int *tri2rwgsign;
-extern double *rwg_media; 
 
 double dotProduct3d(double vec1[], double vec2[]);
 complex<double> dotProduct3d_dc(double vec1[], complex<double> vec2[]);

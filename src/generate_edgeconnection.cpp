@@ -1,6 +1,8 @@
 #include "generate_edgeconnection.h"
+#include "surface_components.h"
 
 void generate_edgeconnection(){
+    generate_surface_components();
     //
     //
     // generate_edgeconnection
