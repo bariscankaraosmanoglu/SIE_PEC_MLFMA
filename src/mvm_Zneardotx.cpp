@@ -1,6 +1,7 @@
 #include <complex>
 #include <chrono>
 #include <omp.h>
+#include "calculate_loadbalance.h"
 
 using namespace std;
 using namespace std::chrono;
@@ -15,7 +16,6 @@ extern int num_rwgs;
 extern int *rwg_ind;
 extern int parallel_omp_on;
 extern int num_threads;
-extern int *thread_boxes;
 extern FILE *file_timer;
 
 extern long int size_Znear;
@@ -24,7 +24,6 @@ void mvm_Zneardotx(complex<double> x[], complex<double> y[]){
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
     int box_start=num_filledboxes[num_mlfmalevels*2-1];
-    int box_end=num_filledboxes[num_mlfmalevels*3-1]+1;
 
 //    long int ind_Znear=0;
 
@@ -32,14 +31,12 @@ void mvm_Zneardotx(complex<double> x[], complex<double> y[]){
     #pragma omp parallel if(parallel_omp_on)
     {
 
-        int tid=omp_get_thread_num();
+        const auto box_range=near_box_range(omp_get_thread_num(),omp_get_num_threads());
         double timer_start = omp_get_wtime();
         double timer_total = 0.0;
 
 
-//        #pragma omp for schedule(dynamic,50)
-//        for(int box_test=box_start;box_test<box_end;box_test++){
-        for(int box_test=thread_boxes[tid*2+0];box_test<thread_boxes[tid*2+1];box_test++){
+        for(int box_test=box_range.first;box_test<box_range.second;box_test++){
             double timer_in = omp_get_wtime();
             for(int ind_nearbox=0;ind_nearbox<27;ind_nearbox++){
                 if(boxes_near[box_test*27+ind_nearbox]!=-1){

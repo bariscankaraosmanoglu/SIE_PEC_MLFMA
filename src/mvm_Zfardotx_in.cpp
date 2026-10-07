@@ -33,8 +33,6 @@ extern complex<double> *aggregation;
 extern complex<double> *disaggregation;
 extern int parallel_omp_on;
 extern int num_threads;
-extern int *thread_boxes;
-extern int *thread_boxes_Rad;
 extern FILE *file_timer;
 extern double *rwg_media; 
 
@@ -225,6 +223,7 @@ void mvm_Zfardotx_in(complex<double> x[], complex<double> y[]){
         box_start=num_filledboxes[num_mlfmalevels*1+indlev];
         box_end=num_filledboxes[num_mlfmalevels*2+indlev]+1;
 
+        calculate_sin_cos(num_finesample_theta,num_finesample_phi,fine_thetaloc,fine_philoc,sintheta,costheta,sinphi,cosphi);
         omp_set_num_threads(num_threads);
         #pragma omp parallel if(parallel_omp_on) shared(aggregation) private(temp_fine_theta,temp_fine_phi,\
                                                                              temp_coarse_theta,temp_coarse_phi)
@@ -235,7 +234,6 @@ void mvm_Zfardotx_in(complex<double> x[], complex<double> y[]){
             complex<double> expfactor;
             double timer_start = omp_get_wtime();
             double timer_total = 0.0;
-            calculate_sin_cos(num_finesample_theta,num_finesample_phi,fine_thetaloc,fine_philoc,sintheta,costheta,sinphi,cosphi);
             temp_fine_theta=new complex<double> [num_finesample_theta*num_finesample_phi];
             temp_fine_phi=new complex<double> [num_finesample_theta*num_finesample_phi];
             temp_coarse_theta=new complex<double> [num_coarsesample_theta*num_coarsesample_phi];
@@ -419,6 +417,7 @@ void mvm_Zfardotx_in(complex<double> x[], complex<double> y[]){
         box_start=num_filledboxes[num_mlfmalevels*1+indlev];
         box_end=num_filledboxes[num_mlfmalevels*2+indlev]+1;
 
+        calculate_sin_cos(num_finesample_theta,num_finesample_phi,fine_thetaloc,fine_philoc,sintheta,costheta,sinphi,cosphi);
         omp_set_num_threads(num_threads);
         #pragma omp parallel if(parallel_omp_on) shared(disaggregation) private(temp_fine_theta,temp_fine_phi,\
                                                                                 temp_coarse_theta,temp_coarse_phi)
@@ -434,7 +433,6 @@ void mvm_Zfardotx_in(complex<double> x[], complex<double> y[]){
             temp_fine_phi=new complex<double> [num_finesample_theta*num_finesample_phi];
             temp_coarse_theta=new complex<double> [num_coarsesample_theta*num_coarsesample_phi];
             temp_coarse_phi=new complex<double> [num_coarsesample_theta*num_coarsesample_phi];
-            calculate_sin_cos(num_finesample_theta,num_finesample_phi,fine_thetaloc,fine_philoc,sintheta,costheta,sinphi,cosphi);
             #pragma omp for  schedule(dynamic)
             for(int box_parent=box_start;box_parent<box_end;box_parent++){
                 double timer_in = omp_get_wtime();

@@ -37,7 +37,6 @@ extern int *tri2rwgnode;
 extern int *tri2rwgsign;
 extern int parallel_omp_on;
 extern int num_threads;
-extern int *thread_boxes;
 extern FILE *file_timer;
 
 extern int *rwg_tris;
