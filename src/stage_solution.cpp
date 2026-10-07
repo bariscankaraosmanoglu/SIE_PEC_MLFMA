@@ -1,3 +1,4 @@
+#include "solver_globals.h"
 #include <stdio.h>
 #include <complex>
 #include <chrono>
@@ -17,7 +18,6 @@ extern complex<double> *disaggregation;
 extern complex<double> *vec_RHS;
 extern complex<double> *vec_sol;
 extern double val_soltol;
-extern double source_PW[];
 extern double *dir_PW;
 extern int *num_source;
 extern int val_pol;

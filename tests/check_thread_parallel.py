@@ -29,6 +29,7 @@ def main():
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--sanitize", action="store_true", help="AddressSanitizer and UBSan; existing leaks excluded")
     parser.add_argument("--baseline-dir", type=Path, help="Compare to saved one-thread operator outputs")
+    parser.add_argument("--skip-build", action="store_true", help="Reuse binaries in --output-dir")
     args = parser.parse_args()
     output = args.output_dir or Path(tempfile.mkdtemp(prefix="mlfma-thread-"))
     output = output.resolve()
@@ -46,8 +47,9 @@ def main():
     ]
     for name, sources in builds:
         command = ["g++", *flags, *map(str, sources), "-o", str(output / name)]
-        with (output / (name + "-build.log")).open("w") as log:
-            subprocess.run(command, stdout=log, stderr=log, check=True)
+        if not args.skip_build:
+            with (output / (name + "-build.log")).open("w") as log:
+                subprocess.run(command, stdout=log, stderr=log, check=True)
     subprocess.run([str(output / "partitions")], env=env, check=True)
     limited = dict(env, OMP_THREAD_LIMIT="2")
     subprocess.run([str(output / "partitions")], env=limited, check=True)

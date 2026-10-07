@@ -25,7 +25,6 @@ extern double *rwg_lengths;
 extern double *node_pos;
 extern int *rwg_nodes;
 extern int *rwg_tris;
-extern double val_cfiealpha;
 extern double *vec_trinormals;
 extern int *trans_index;
 extern complex<double> *trans_op;

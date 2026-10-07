@@ -1,3 +1,4 @@
+#include "solver_globals.h"
 #include <stdio.h>
 #include <complex>
 #include <chrono>

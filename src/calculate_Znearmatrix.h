@@ -1,3 +1,4 @@
+#include "solver_globals.h"
 #include <stdio.h>
 #include <cmath>
 #include <complex>
@@ -9,7 +10,6 @@ using namespace std;
 using namespace std::chrono;
 
 extern double val_etaO;
-extern double val_cfiealpha[];
 extern int *children;
 extern double val_kO;
 extern double val_epsilonO;
@@ -41,7 +41,6 @@ extern FILE *file_timer;
 
 extern int *rwg_tris;
 extern int *tri_media;
-extern double *rwg_media; 
 extern double *vec_trinormals;
 extern int num_rwgs;
 extern int num_tris;

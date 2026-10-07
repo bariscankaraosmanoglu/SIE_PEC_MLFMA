@@ -1,3 +1,4 @@
+#include "solver_globals.h"
 #include <complex>
 #include <string.h>
 #include <stdio.h>
@@ -14,7 +15,6 @@ extern int source_type;
 extern int val_itermax;
 extern double val_soltol;
 extern int num_media;
-extern double val_cfiealpha[];
 extern complex<double> val_impedance[];
 extern double val_freq;
 extern int num_freqs;
@@ -23,7 +23,6 @@ extern complex<double> *source_CSP;
 extern complex<double> *source_current;
 extern complex<double> *source_DG;
 extern double *source_dipole;
-extern double source_PW[];
 extern int *num_source;
 extern int val_pol;
 extern int val_pc;

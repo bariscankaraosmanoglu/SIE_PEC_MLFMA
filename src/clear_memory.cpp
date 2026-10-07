@@ -1,10 +1,9 @@
+#include "solver_globals.h"
 #include <complex>
 
 using namespace std;
 
 // created in read_simulationinput
-extern const char *modeltriname;
-extern const char *modelnodename;
 
 // created in read_meshmodel
 extern double *node_pos;
@@ -40,13 +39,11 @@ extern int *boxes_far;
 extern int *boxes_near;
 
 // created in generate_Znearcomponent
-extern int *nearindex;
 extern int *rwg2box;
 extern int *rwg_reverseind;
 extern int *smallestbox2tri;
 
 // created in generate_Zfarcomponents
-extern int *agg_index;
 
 // created in generate_translationcomponent
 extern int *trans_index;

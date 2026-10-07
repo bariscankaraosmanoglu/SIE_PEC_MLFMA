@@ -1,5 +1,6 @@
 #include "calculate_Znearmatrix.h"
 #include "calculate_loadbalance.h"
+#include "surface_components.h"
 
 void calculate_Znearmatrix(){
     //
@@ -276,13 +277,12 @@ void generate_cfiealpha(){
         rwg_media[ind]=temp_cfiealpha;
     }
 
-    for(int ind=0;ind<num_tris;ind++){
-        if(tri2rwgindex[3*ind+0]==-1 || tri2rwgindex[3*ind+1]==-1 || tri2rwgindex[3*ind+2]==-1){
-            for(int ind1=0;ind1<3;ind1++){
-                if(tri2rwgindex[3*ind+ind1]!=-1){
-                    rwg_media[tri2rwgindex[3*ind+ind1]]=1;
-                }
-            }
+    // A boundary anywhere on a connected surface requires EFIE for every
+    // testing RWG on that surface, including RWGs on interior triangles.
+    for(int ind=0;ind<num_rwgs;ind++){
+        if(triangle_on_open_surface(rwg_tris[2*ind]) ||
+           triangle_on_open_surface(rwg_tris[2*ind+1])){
+            rwg_media[ind]=1.0;
         }
     }
 
