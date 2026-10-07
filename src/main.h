@@ -2,6 +2,7 @@
 #include <complex>
 #include <chrono>
 #include "matrixBlock.h"
+#include "calculate_loadbalance.h"
 
 using namespace std;
 using namespace std::chrono;
@@ -97,10 +98,6 @@ int *rwg_ind;
 int *boxes_far;
 int *boxes_near;
 
-// created in calculate_loadbalance
-int *thread_boxes;
-int *thread_boxes_Rad;
-
 // created in generate_Znearcomponent
 long int *nearindex;
 int *rwg2box;
@@ -155,7 +152,6 @@ void generate_nearfarboxes();
 void generate_Znearcomponent();
 void generate_Zfarcomponents();
 void generate_translationcomponent();
-void calculate_loadbalance();
 void calculate_translationoperator();
 void calculate_Znearmatrix();
 void calculate_blockdiagonalpreconditioner();

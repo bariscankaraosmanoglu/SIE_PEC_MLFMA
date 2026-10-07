@@ -1,4 +1,5 @@
 #include "calculate_Znearmatrix.h"
+#include "calculate_loadbalance.h"
 
 void calculate_Znearmatrix(){
     //
@@ -8,7 +9,6 @@ void calculate_Znearmatrix(){
     // Triangle to triangle calculations are performed.
 
     int box_start=num_filledboxes[num_mlfmalevels*2-1];
-    int box_end=num_filledboxes[num_mlfmalevels*3-1]+1;
     int testtri,basistri;
     int testnode1,testnode2,testnode3;
     int basisnode1,basisnode2,basisnode3;
@@ -67,18 +67,10 @@ void calculate_Znearmatrix(){
                                  basisfunction,basisnode,basissign,basislength,vectorvalue3,basis_node_pos,val_dot2,projectionvalue3,Znear_index) \
                                  if(parallel_omp_on)
     {
-        #pragma omp barrier
-        int tid=omp_get_thread_num();
+        const auto box_range=near_box_range(omp_get_thread_num(),omp_get_num_threads());
         double timer_start = omp_get_wtime();
         double timer_total = 0.0;
-//        #pragma omp for private(box_basis,testtri,testnode1,testnode2,testnode3,testnode1loc,testnode2loc,testnode3loc,testtrinormal,testlocation,basistri,\
-//                                 basisnode1,basisnode2,basisnode3,basisnode1loc,basisnode2loc,basisnode3loc,basisarea,basistrinormal,basisweights,basislocations,\
-//                                 analytical1R,analyticalrhoR,analyticalgrad1R,analyticalgradR,integralA,integralB,integralC,basisweight,vec_R,distance,\
-//                                 extractedgreensAB,extractedgreensC,testfunction,testnode,testsign,testlength,vectorvalue2,test_node_pos,val_dot1,projectionvalue2,\
-//                                 basisfunction,basisnode,basissign,basislength,vectorvalue3,basis_node_pos,val_dot2,projectionvalue3,Znear_index) \
-//                                 schedule(dynamic, 1)
-//        for(int box_test=box_start;box_test<box_end;box_test++){
-        for(int box_test=thread_boxes[tid*2+0];box_test<thread_boxes[tid*2+1];box_test++){
+        for(int box_test=box_range.first;box_test<box_range.second;box_test++){
             double timer_in = omp_get_wtime();
             for(int ind_nearbox=0;ind_nearbox<27;ind_nearbox++){
                 if(boxes_near[box_test*27+ind_nearbox]!=-1){
