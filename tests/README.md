@@ -4,6 +4,8 @@ For per-RWG CFIE coefficients and open-surface enforcement, see
 [README_CFIE.md](README_CFIE.md).
 For Krylov arithmetic, true residuals, and termination reporting, see
 [README_KRYLOV.md](README_KRYLOV.md).
+For input compatibility, unsupported modes, and checked dimensions, see
+[README_INPUTS.md](README_INPUTS.md).
 
 Run from the repository root:
 

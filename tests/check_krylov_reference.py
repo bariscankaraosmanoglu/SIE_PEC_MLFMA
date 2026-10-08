@@ -25,7 +25,7 @@ def main():
     cases += [("limited-pc0", 0, 1, 15, 1, "iteration_limit", 1),
               ("limited-pc2", 2, 1, 15, 1, "iteration_limit", 1),
               ("limited-inner", 2, 192, 1, 1, "converged", 0),
-              ("invalid-inner", 2, 192, -1, 1, "nonfinite_arithmetic", 1)]
+              ("invalid-inner", 2, 192, -1, 1, "input_error", 1)]
     for name, pc, maxit, inner, illuminations, expected_status, expected_exit in cases:
         directory = output / name; directory.mkdir(exist_ok=True)
         text = base.replace("Preconditioners 2", f"Preconditioners {pc}").replace(
@@ -37,6 +37,13 @@ def main():
             result = subprocess.run(["/usr/bin/time", "-f", "elapsed=%e peak_rss_kib=%M", "-o", "resources.txt", str(solver)],
                                     cwd=directory, env=env, stdout=log, stderr=log, timeout=30)
         assert result.returncode == expected_exit, (name, result.returncode, directory / "run.log")
+        if expected_status == "input_error":
+            log = (directory / "run.log").read_text()
+            assert "Input error" in log and "val_itermax_pc" in log
+            assert not (directory / "result_solver_status.txt").exists()
+            assert not (directory / "result_rwgcoefficient.txt").exists()
+            print(name, "rejected before assembly", flush=True)
+            continue
         rows = [line.split() for line in (directory / "result_solver_status.txt").read_text().splitlines() if not line.startswith("#")]
         assert len(rows) == illuminations
         for index, row in enumerate(rows):
