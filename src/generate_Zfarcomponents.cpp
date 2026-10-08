@@ -1,6 +1,10 @@
 #include "generate_Zfarcomponents.h"
+#include "input_validation.h"
+#include <climits>
+#include <vector>
 
 void generate_Zfarcomponents(){
+    try {
     //
     //
     // generate_Zfarcomponents
@@ -23,7 +27,7 @@ void generate_Zfarcomponents(){
         num_phi=num_theta*2;
         for(int ind_box=startbox; ind_box<endbox; ind_box++){
             agg_index[ind_box]=size_agg;
-            size_agg+=long(num_theta)*long(num_phi);
+            size_agg=checked_index_sum(size_agg,long(num_theta)*num_phi,INT_MAX/2,"aggregation");
         }
     }
     printf("Aggregation And Disaggregation Operator Size: %ld  [%f GB]\n", size_agg*4, size_agg*4.0*16.0/1024.0/1024/1024);
@@ -41,7 +45,7 @@ void generate_Zfarcomponents(){
             num_phi=num_theta*2;
             for(int ind_box=startbox; ind_box<endbox; ind_box++){
                 agg_index_pc[ind_box]=size_agg_pc;
-                size_agg_pc+=long(num_theta)*long(num_phi);
+                size_agg_pc=checked_index_sum(size_agg_pc,long(num_theta)*num_phi,INT_MAX/2,"approximate aggregation");
             }
         }
         printf("PC Aggregation And Disaggregation Operator Size: %ld  [%f GB]\n", size_agg_pc*4, size_agg_pc*4.0*16.0/1024.0/1024/1024);
@@ -49,5 +53,7 @@ void generate_Zfarcomponents(){
     }
 
     std::cout.flush();
+    } catch (const InputError& error) { report_input_error(error); }
+      catch (const std::bad_alloc&) { report_input_error(InputError("aggregation","unable to allocate index storage")); }
 }
 
