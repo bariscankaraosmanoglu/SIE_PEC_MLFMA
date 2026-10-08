@@ -161,7 +161,7 @@ void calculate_blockdiagonalpreconditioner();
 void mvm_Zneardotx();
 void mvm_Zfardotx();
 
-void stage_solution();
+int stage_solution();
 void stage_aftersolution();
 
 void clear_memory();

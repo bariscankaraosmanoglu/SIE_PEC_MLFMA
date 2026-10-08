@@ -15,9 +15,9 @@ int main()
     calculate_translationoperator();
     calculate_blockdiagonalpreconditioner();
 
-    stage_solution();
+    const int solution_status = stage_solution();
     stage_aftersolution();
     clear_memory();
 
-    return 0;
+    return solution_status;
 }
