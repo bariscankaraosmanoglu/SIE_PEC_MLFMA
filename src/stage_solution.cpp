@@ -1,4 +1,9 @@
 #include "solver_globals.h"
+#include "krylov.h"
+#include <vector>
+#include <fstream>
+#include <iomanip>
+#include <algorithm>
 #include <stdio.h>
 #include <complex>
 #include <chrono>
@@ -32,9 +37,7 @@ extern matrixBlock* blockdiagonalmatrix;
 void calculate_dir_pw(int num_source[], double delta_theta, double delta_phi, double dir_PW[], int ind_theta, int ind_phi);
 void calculate_initguess(int ind_sol, complex <double> val_RHS_ratio, complex <double> vec_RHS_prev[]);
 void calculate_rhsvector(double dir_PW[]);
-void mvm(complex<double> x[], complex<double> y[]);
-int fgmres(int size_vecRHS,complex<double> vec_RHS[],int itermax,int iterrestart,double soltolerance,complex<double> vec_sol[]);
-int gmres(int size_vecRHS,complex<double> vec_RHS[],int itermax,double soltolerance,complex<double> vec_sol[], int pc_in);
+void mvm_physical(complex<double> x[], complex<double> y[]);
 void copy_rhsvector(complex <double> vec_RHS_prev[]);
 void calculate_farfield(int ind_sol);
 void calculate_farfield_mlfma(int ind_sol, complex<double> vec_sol[]);
@@ -42,7 +45,7 @@ void calculate_farfield_mlfma(int ind_sol, complex<double> vec_sol[]);
 void mvm_BDPmatrix(std::complex<double> x[], std::complex<double> y[]);
 
 
-void stage_solution(){
+int stage_solution(){
 
     int itermax=val_itermax;
     int iterrestart=val_itermax;
@@ -50,9 +53,12 @@ void stage_solution(){
     
     double delta_theta=(source_PW[1]-source_PW[0]);
     double delta_phi=(source_PW[3]-source_PW[2]);
-    complex <double> val_RHS_ratio;
-    complex <double> *vec_RHS_prev=new complex <double>[num_rwgs];
-    complex <double> *vec_RHS_pc=new complex <double>[num_rwgs];
+    vector<complex<double>> vec_RHS_prev(num_rwgs), physical_rhs(num_rwgs), physical_product(num_rwgs);
+    ofstream status_file("result_solver_status.txt");
+    if (!status_file) fprintf(stderr, "Cannot open result_solver_status.txt\n");
+    status_file << setprecision(17)
+                << "# illumination status krylov_status iterations matrix_products krylov_true_relative_residual physical_true_relative_residual tolerance\n";
+    int exit_status = status_file ? 0 : 1;
     dir_PW = new double[4];
     aggregation=new complex<double>[size_agg*2];
     disaggregation=new complex<double>[size_agg*2];
@@ -68,19 +74,41 @@ void stage_solution(){
         for(int ind_phi=0; ind_phi<num_source[1]; ind_phi++){
         calculate_dir_pw(num_source, delta_theta, delta_phi, dir_PW, ind_theta, ind_phi);
         calculate_rhsvector(dir_PW);
+        copy_n(vec_RHS, num_rwgs, physical_rhs.data());
         if (val_pc==1){mvm_BDPmatrix(vec_RHS, vec_RHS);}
-        calculate_initguess(ind_sol, val_RHS_ratio, vec_RHS_prev);
+        calculate_initguess(ind_sol, complex<double>{}, vec_RHS_prev.data());
 
-        if((val_pc==0)||(val_pc==1)) gmres(num_rwgs,vec_RHS,itermax,soltolerance,vec_sol,0);
-        if(val_pc==2) fgmres(num_rwgs,vec_RHS,itermax,iterrestart,soltolerance,vec_sol);
+        KrylovResult result;
+        if((val_pc==0)||(val_pc==1)) result = gmres_solve(num_rwgs,vec_RHS,itermax,soltolerance,vec_sol,0,true);
+        if(val_pc==2) result = fgmres_solve(num_rwgs,vec_RHS,itermax,iterrestart,soltolerance,vec_sol,true);
 
-        copy_rhsvector(vec_RHS_prev);
+        // Check b - A*x using the original RHS and accurate, unpreconditioned operator.
+        fill(physical_product.begin(), physical_product.end(), complex<double>{});
+        mvm_physical(vec_sol, physical_product.data());
+        for (int k = 0; k < num_rwgs; ++k) physical_product[k] = physical_rhs[k]-physical_product[k];
+        const double rhs_norm = krylov_norm(physical_rhs.data(), num_rwgs);
+        const double physical_relative = krylov_norm(physical_product.data(), num_rwgs)/(rhs_norm == 0.0 ? 1.0 : rhs_norm);
+        KrylovStatus status = result.status;
+        if (!isfinite(physical_relative)) status = KrylovStatus::NonFinite;
+        else if (status == KrylovStatus::Converged && physical_relative > soltolerance)
+            status = KrylovStatus::ResidualMismatch;
+        if (status != KrylovStatus::Converged) exit_status = 1;
+        printf("Solver illumination %d: %s, iterations=%d, true relative residual=%.6e, physical relative residual=%.6e, tolerance=%.6e\n",
+               ind_sol, krylov_status_name(status), result.iterations, result.relative_residual, physical_relative, soltolerance);
+        status_file << ind_sol << ' ' << krylov_status_name(status) << ' ' << krylov_status_name(result.status)
+                    << ' ' << result.iterations << ' ' << result.matrix_products << ' ' << result.relative_residual
+                    << ' ' << physical_relative << ' ' << soltolerance << '\n';
+        status_file.flush();
+
+        copy_rhsvector(vec_RHS_prev.data());
         if ((dir_ff>0) && (dir_ff<5)){
             calculate_farfield_mlfma(ind_sol, vec_sol);
         }else{
             calculate_farfield(ind_sol);
         }
         
+        delete[] vec_RHS;
+        vec_RHS = nullptr;
         ind_sol++;
         }
     }
@@ -92,6 +120,7 @@ void stage_solution(){
     printf("Solution Part Takes %f s \n", time_span.count());
 
     std::cout.flush();
+    return exit_status;
 }
 
 
@@ -122,6 +151,7 @@ void calculate_dir_pw(int num_source[], double delta_theta, double delta_phi, do
 void calculate_initguess(int ind_sol, complex <double> val_RHS_ratio, complex <double> vec_RHS_prev[]){
     if (ind_sol>0){
         for(int ind_rwg=0;ind_rwg<num_rwgs;ind_rwg++){
+            if (vec_RHS_prev[ind_rwg] == complex<double>{}) continue;
             val_RHS_ratio=vec_RHS[ind_rwg]/vec_RHS_prev[ind_rwg];
             if (abs(val_RHS_ratio)<2){
                 vec_sol[ind_rwg]*=val_RHS_ratio;

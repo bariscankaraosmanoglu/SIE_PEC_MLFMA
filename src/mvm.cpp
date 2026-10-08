@@ -9,10 +9,16 @@ void mvm_Zneardotx(complex<double> x[], complex<double> y[]);
 void mvm_Zfardotx(complex<double> x[], complex<double> y[]);
 void mvm_BDPmatrix(std::complex<double> x[], std::complex<double> y[]);
 
-void mvm(complex<double> x[], complex<double> y[]){
+void mvm_physical(complex<double> x[], complex<double> y[]){
 
     mvm_Zneardotx(x,y);
     mvm_Zfardotx(x,y);
-    if (val_pc==1){mvm_BDPmatrix(y, y);}
+
     
+}
+
+// Left preconditioning is excluded when checking the physical equation.
+void mvm(complex<double> x[], complex<double> y[]){
+    mvm_physical(x, y);
+    if (val_pc==1){mvm_BDPmatrix(y, y);}
 }
