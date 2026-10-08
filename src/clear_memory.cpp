@@ -1,4 +1,5 @@
 #include "solver_globals.h"
+#include "matrixBlock.h"
 #include <complex>
 
 using namespace std;
@@ -60,12 +61,15 @@ extern complex<double> *disaggregation;
 
 // created in calculate_farfield
 extern complex<double> *vec_farfield;
+extern matrixBlock* blockdiagonalmatrix;
 
 void clear_memory(){
     //
     //
     // clear_memory
     // Deallocating the large global arrays in the simulation
+    delete[] blockdiagonalmatrix;
+    blockdiagonalmatrix = nullptr;
     delete[] node_pos;
     delete[] tri_nodes;
     delete[] rwg_tris;

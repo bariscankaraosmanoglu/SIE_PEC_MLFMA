@@ -13,7 +13,7 @@ int main()
     calculate_loadbalance();
     calculate_Znearmatrix();
     calculate_translationoperator();
-    calculate_blockdiagonalpreconditioner();
+    if (val_pc == 1) calculate_blockdiagonalpreconditioner();
 
     const int solution_status = stage_solution();
     stage_aftersolution();
