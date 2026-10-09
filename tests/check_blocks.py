@@ -23,10 +23,12 @@ def main():
     flags = ["-std=gnu++17", "-fopenmp", "-I" + str(source)]
     flags += ["-O1", "-g", "-fsanitize=address,undefined", "-fno-omit-frame-pointer"] if args.sanitize else ["-O3"]
     lu = [source / "matrixBlock.cpp"] if (source / "matrixBlock.cpp").exists() else []
+    workspace = [source / name for name in ("mlfma_workspace.cpp", "sample_locations_weights.cpp",
+                 "interpolationweights.cpp", "input_validation.cpp")] if (source / "mlfma_workspace.cpp").exists() else []
     builds = {
         "block_factorization": [ROOT / "tests/block_factorization.cpp", *lu],
         "block_preconditioner": [ROOT / "tests/block_preconditioner.cpp", source / "calculate_blockdiagonalpreconditioner.cpp",
-                                 source / "mvm_BDPmatrix.cpp", source / "clear_memory.cpp", *lu],
+                                 source / "mvm_BDPmatrix.cpp", source / "clear_memory.cpp", *lu, *workspace],
     }
     commands = {}
     for name, files in builds.items():

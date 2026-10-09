@@ -1,6 +1,147 @@
 # Handoff
 
-## Current task: rank-5 block preconditioning
+## Current task: rank-6 ownership and MLFMA workspace — implemented and validated
+
+Branch `codex/fix_rank6`, starting clean at
+`9d2a62412f80663d049f5f0488471e5069efba73`. Initial implementation started clean.
+The user subsequently changed the sphere23 PW phi sample count from 181 to 31
+and Preconditioners from 2 to 1. Preserve both input edits and exclude them from
+any rank-6 commit unless requested.
+This handoff accompanies the user-requested rank-6 implementation commit,
+including its tests and validation notes. No push is authorized. The user input
+edits and untracked executable are excluded from the commit.
+Preserve the untracked root `run_mlfma` and every artifact.
+
+Ownership and MLFMA workspace reuse are complete for this phase. Krylov storage
+has not been changed and remains deferred. No full RWG radiation-pattern cache.
+
+New `src/mlfma_workspace.h/.cpp` owns angular/trigonometric grids and
+interpolation stencils keyed by exact shape/order/sampling convention. The
+accurate and approximate far operators plus accelerated field output reuse
+worker field/interpolation buffers. Metadata is prepared serially and shared
+read-only; a barrier-protected pool uses actual teams, including disabled,
+limited, dynamic, and 32-worker requests. Global solver state remains sequential
+and nonreentrant. Workspace clears at tree creation and simulation cleanup.
+
+`clear_memory` releases/nulls all covered owners, including previously missing
+material, illumination, solution, and approximate-operator arrays. Local direct
+field and topology deletions null their globals. Source counts borrow static
+storage. Unused approximate translation temporaries were removed. Legacy
+interpolation signatures remain available. No numerical method/settings changed.
+
+New regression: `tests/check_workspace.py` / `tests/workspace_operators.cpp`.
+Instructions/evidence: `tests/README_WORKSPACE.md`. Existing input/block subset
+build scripts gained workspace link dependencies; compile/link checks passed.
+Those additional suites were NOT executed.
+
+User approved: “bounded rank-6 validation is approved”. Completed baseline and
+updated small-fixture checks, including normal and ASan/UBSan ownership/thread/
+CFIE tests, both ten-case 24-RWG Krylov reference suites (modes 0/1/2, repeated
+illuminations, limits), repeated accurate/approximate products/fields, and three
+sequential interleaved timing trials. All 424 saved normal numerical outputs are
+byte-identical. Repetition difference is zero; retained workspace capacity stays
+at 8,045,800 bytes after 32-worker warmup and becomes zero at cleanup. Partial
+and repeated cleanup plus metadata rebuild checks pass.
+
+Baseline short LSan run: 24,312,560 bytes leaked in 1,966 allocations; updated
+matching run: exit 0, no reported leaks. Sandbox ptrace initially blocked LSan;
+failed logs were retained and checks rerun with sandbox approval outside ptrace.
+Normal and sanitizer thread tests cover serialized/runtime-limited/dynamic teams
+and 1/2/8/16/32 requests; throughput beyond eight logical CPUs remains untested.
+
+Production builds passed using root AGENTS flags; existing 38 compiler warnings
+unchanged. Final root executable hashes identically to the validated production
+build (later source changes were whitespace/declaration formatting only).
+CRLF-aware diff check and Python syntax inspection passed. Existing C++ CRLF
+preserved; new files LF. Read-only review confirmed no Krylov storage/source edits.
+
+Three-trial median before/after on the 24-RWG fixture (1 GHz, unchanged settings):
+wall 1.20/1.13 s; repeated section 0.888264/0.827768 s; peak RSS 58,804/38,128 KiB
+(-20.19 MiB). Setup/assembly, team warmup through 32, 100 product pairs at eight
+workers, six accelerated field outputs/I/O/comparisons, cleanup included. These
+are operator-driver timings, not solver solve-time claims. All timing output
+files also match. Host: GCC 11.4.0, i7-7700HQ, four physical/eight logical CPUs.
+
+Artifacts: `/tmp/mlfma-rank6-26OJl7kI` (all retained). Exact commands in
+`COMMANDS.md`; baseline sources in `before/src`; results in `before/` and
+`after/`; `comparison.json`, `timing/summary.json`, and
+`timing/numerical-comparison.json` contain comparisons/measurements;
+`validated-manifest.json` records source/test/executable hashes. Useful production
+log: `after/build-ready.log`; leak logs: `before/workspace-san/leaks/` and
+`after/workspace-san/leaks/`; current CFIE sanitizer rerun:
+`after/cfie-san-unrestricted-run.log`.
+
+All requested checks have been executed. The larger sphere pairs are recorded
+below. Mode 1 fails the physical residual tolerance in both builds; this
+existing stopping-criterion limitation remains unresolved. SOM, the original
+181-angle sweep, high-core throughput, a whole-program leak audit, and Krylov
+storage work remain outside this phase.
+Expanded tests require separate AGENTS approval; commits/pushes need explicit
+requests. Next: user review before changing Krylov storage.
+
+## Rank-6 sphere23 performance follow-up — completed
+
+The user explicitly requested performance checks for
+`src/test_23_sphere_0p01m.pnu`. One sequential full archived/current pair used
+identical copies of the current 31-illumination input, leaving the source input
+and rank-6 implementation untouched. Both existing executables were verified
+against their recorded sources/manifest; no rebuild needed.
+
+At 3 GHz, 37,587 RWGs, mode 2, six levels, digits 2, approximation 0.3,
+interpolation 2, tolerance 0.001 and eight workers: full wall seconds
+`238.24/234.44` (-1.60%); solution seconds `237.126272/233.295821` (-1.62%);
+peak RSS KiB `301120/287540` (-13.26 MiB, -4.51%). Both exit 0 with all
+31 illuminations converged, 181 outer iterations, 243 Krylov matrix products,
+and maximum physical residual `9.93188384084087e-4`. All five result files
+are byte-identical, including currents, direct monostatic fields and status.
+Sampled HWM grows from 288028 to 301120 KiB in the baseline and stays near
+287468–287540 KiB after rank-6. This is consistent with leak removal; samples
+across different solve phases do not establish a leak rate. One timing pair
+cannot establish a reliable speedup. Original 181-angle sweep/SOM not rerun.
+
+All artifacts retained at
+`/tmp/mlfma-rank6-sphere23-before-after-9Rs5LV7b`, including input, executables,
+metadata, starting user input diff, exact commands, run/analysis scripts, logs,
+RSS samples, and `summary.json`. No source/test-code changes or new test
+approvals pending. Documentation only updated for this follow-up. No staging,
+commit or push performed; preserve the user's 31-angle input edit.
+
+## Rank-6 sphere23 mode-1 follow-up — measured, physical tolerance unmet
+
+User explicitly requested the repeat after changing Preconditioners from 2 to 1.
+One sequential baseline/current pair used identical current input copies;
+no source/test-code or input changes. Existing verified executables reused.
+
+For 31 illuminations, 37,587 RWGs, 3 GHz, tolerance 0.001, six levels,
+interpolation 2, digits 2 and eight workers: full wall seconds
+`339.18/333.36` (-1.72%); solution seconds `338.016582/332.210418` (-1.72%);
+peak RSS KiB `235016/226780` (-8.04 MiB, -3.50%). Both build 4,312 pivoted LU
+blocks containing 417,495 complex coefficients. All five result files are
+byte-identical; 648 iterations and 710 Krylov matrix products on both sides.
+
+Both complete all 31 illuminations but exit 1: every status is
+`physical_residual_not_converged`. Preconditioned GMRES converges, but the
+physical relative residual ranges from `1.36948e-3` to `1.72394e-3`, above
+0.001. This is identical before/after rank-6. Numerical identity passes;
+physical convergence validation fails. stage_solution checks the physical
+residual only after the preconditioned solve and flags it without continuing.
+No stopping-criterion or tolerance change was made; fixing that is separate work.
+
+Compared with the previously measured current mode-2 run, current mode 1
+uses 21.13% less peak memory but takes 42.19% longer (333.36 vs 234.44 s).
+Mode 2 meets the physical tolerance for all illuminations; mode 1 meets it for
+none, so the mode comparison is not at equal achieved accuracy. One pair cannot
+establish a reliable speedup from rank-6.
+
+All artifacts, commands, scripts, binaries, inputs, starting diffs, logs,
+measurements, RSS samples and summary.json retained at
+`/tmp/mlfma-rank6-sphere23-pc1-before-after-z6ZFb6C1`. The requested pair is
+complete; no additional test approvals pending. Physical convergence remains an
+unresolved mode-1 limitation. No source/test-code edits or Git mutations; retain
+both user input edits and all prior artifacts. Documentation updated only.
+
+## Earlier rank-5 handoff (historical)
+
 
 Implemented on `codex/fix_rank5`, starting at merge commit
 `75c25ed829c2c50aedb431c2d53274016030352a`. Initial working tree was clean;

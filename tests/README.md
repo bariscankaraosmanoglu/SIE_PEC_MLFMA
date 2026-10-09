@@ -8,6 +8,8 @@ For input compatibility, unsupported modes, and checked dimensions, see
 [README_INPUTS.md](README_INPUTS.md).
 For mode-1 pivoted block factorization and factor ownership, see
 [README_BLOCKS.md](README_BLOCKS.md).
+For simulation ownership and reusable MLFMA workspace, see
+[README_WORKSPACE.md](README_WORKSPACE.md).
 
 Run from the repository root:
 

@@ -145,7 +145,7 @@ void generate_edgeconnection(){
             }
         }
     }
-    delete[] nodetrisindex;
+    delete[] nodetrisindex; nodetrisindex=nullptr;
     delete[] nodetris;
     delete[] num_trispernode;
 

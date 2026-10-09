@@ -34,7 +34,9 @@ complex<double> *source_DG;
 double *source_dipole;
 double source_PW[4];
 double *dir_PW;
-int *num_source=new int[2];
+// Fixed-size source counts have static ownership; num_source is a borrowed view.
+int num_source_storage[2]{};
+int *num_source=num_source_storage;
 int val_pol;
 int parallel_omp_on;
 int num_threads;

@@ -1,8 +1,11 @@
+#include "mlfma_workspace.h"
 #include "generate_octtree.h"
 #include "input_validation.h"
 #include <climits>
 
 void generate_octtree(){
+    // A new tree starts a new sampling/workspace lifetime.
+    mlfma_workspace().clear();
     try {
     require_input(num_rwgs > 0, "RWG", "mesh has no full RWG unknowns; isolated triangles are unsupported by this discretization");
     //
