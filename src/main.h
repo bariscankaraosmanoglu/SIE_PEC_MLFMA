@@ -127,7 +127,7 @@ complex<double> *trans_op_pc;
 complex<double> *matrix_Znear;
 
 // created in calculate_blockdiagonalpreconditioner
-matrixBlock* blockdiagonalmatrix;
+matrixBlock* blockdiagonalmatrix = nullptr;
 
 // created in calculate_rhsvector
 complex<double> *vec_RHS;

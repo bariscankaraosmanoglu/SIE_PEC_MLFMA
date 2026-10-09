@@ -1,94 +1,73 @@
 #include "matrixBlock.h"
-#include "matrixoperations.h"
-#include "matrix_inverse.h"
-#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <exception>
+#include <memory>
+#include <stdexcept>
+#include <vector>
 
-extern int *children;
-extern int *boxes_near;
-extern complex<double> *matrix_Znear;
-extern long int *nearindex;
-extern int num_mlfmalevels;
-extern int *num_filledboxes;
-extern int num_rwgs;
-extern int *rwg_ind;
-extern int num_filledboxesall;
-extern int *num_children;
+extern int val_pc;
+extern int *children, *boxes_near, *num_filledboxes, *num_children, *rwg_ind;
+extern int num_mlfmalevels, num_rwgs;
+extern std::complex<double> *matrix_Znear;
+extern long int *nearindex, size_Znear;
 extern matrixBlock* blockdiagonalmatrix;
 
-void calculate_blockdiagonalpreconditioner(){
-    complex<double>** mattest;
-    complex<double>** result;
-    int matsize;
-
-    printf("num_filledboxesall: %d \n", num_filledboxesall);
-
-    blockdiagonalmatrix = new matrixBlock[num_filledboxes[num_mlfmalevels-1]];
-
-    int box_start=num_filledboxes[num_mlfmalevels*2-1];
-    int box_end=num_filledboxes[num_mlfmalevels*3-1]+1;
-
-    for(int box_test=box_start;box_test<box_end;box_test++){
-        for(int ind_nearbox=0;ind_nearbox<27;ind_nearbox++){
-            if(boxes_near[box_test*27+ind_nearbox]!=-1){
-                int box_basis=boxes_near[box_test*27+ind_nearbox];
-                if(box_test==box_basis){
-                    int num_rwgs_inbox = num_children[box_test];
-                    blockdiagonalmatrix[box_test-box_start].initmatrixBlock(num_rwgs_inbox,num_rwgs_inbox);
-                    int rwg_test_start=children[box_test*2+0];
-                    int rwg_test_end=children[box_test*2+1]+1;
-                    long int ind_Znear=nearindex[(box_test-box_start)*27+ind_nearbox];
-
-
-                    for(int ind_rwg_test=rwg_test_start;ind_rwg_test<rwg_test_end;ind_rwg_test++){
-                        int testfunction=rwg_ind[ind_rwg_test];
-                        blockdiagonalmatrix[box_test-box_start].indrows[ind_rwg_test-rwg_test_start]=testfunction; 
-                        blockdiagonalmatrix[box_test-box_start].indcols[ind_rwg_test-rwg_test_start]=testfunction; //Test and basis functions are the same for self-box
-
-                        // printf("%d  %d \n", box_test, testfunction);
-                    }
-
-
-                    for(int ind_rwg_test=rwg_test_start;ind_rwg_test<rwg_test_end;ind_rwg_test++){
-                        int testfunction=rwg_ind[ind_rwg_test];
-                        int rwg_basis_start=children[box_basis*2+0];
-                        int rwg_basis_end=children[box_basis*2+1]+1;
-                        for(int ind_rwg_basis=rwg_basis_start;ind_rwg_basis<rwg_basis_end;ind_rwg_basis++){
-                            int basisfunction=rwg_ind[ind_rwg_basis];
-                            blockdiagonalmatrix[box_test-box_start].assignvalue(ind_rwg_test-rwg_test_start,ind_rwg_basis-rwg_basis_start,matrix_Znear[ind_Znear]);
-
-                            //matrix_Znear[ind_Znear]=complex<double> (0.0, 0.0);
-                            //if(basisfunction==testfunction)
-                            //    matrix_Znear[ind_Znear]=complex<double> (1.0, 0.0);
-
-                            ind_Znear++;
-                        }
-                    }
+void calculate_blockdiagonalpreconditioner() {
+    delete[] blockdiagonalmatrix;
+    blockdiagonalmatrix = nullptr;
+    // Mode 2 uses the approximate-operator inner GMRES without these factors.
+    // Keep the guard here as well as in main for direct callers/test drivers.
+    if (val_pc != 1) return;
+    int box_test = -1;
+    try {
+        if (num_mlfmalevels < 1 || num_rwgs <= 0)
+            throw std::runtime_error("invalid tree or RWG dimensions");
+        const int num_boxes = num_filledboxes[num_mlfmalevels-1];
+        const int box_start = num_filledboxes[num_mlfmalevels*2-1];
+        const int box_end = num_filledboxes[num_mlfmalevels*3-1]+1;
+        if (num_boxes <= 0 || box_start < 0 || box_end-box_start != num_boxes)
+            throw std::runtime_error("inconsistent leaf-box range");
+        std::unique_ptr<matrixBlock[]> blocks(new matrixBlock[num_boxes]);
+        std::vector<unsigned char> covered(num_rwgs, 0);
+        long long coefficients = 0;
+        for (box_test = box_start; box_test < box_end; ++box_test) {
+            const int n = num_children[box_test];
+            const int first = children[box_test*2];
+            const int last = children[box_test*2+1];
+            if (n <= 0 || first < 0 || last < first || last >= num_rwgs || last-first+1 != n)
+                throw std::runtime_error("invalid leaf RWG range");
+            int self = -1;
+            for (int neighbor = 0; neighbor < 27; ++neighbor)
+                if (boxes_near[box_test*27+neighbor] == box_test) {
+                    if (self != -1) throw std::runtime_error("duplicate self interaction");
+                    self = neighbor;
                 }
+            if (self == -1) throw std::runtime_error("missing self interaction");
+            const long int offset = nearindex[(box_test-box_start)*27+self];
+            const long long count = 1LL*n*n;
+            if (offset < 0 || offset > size_Znear || count > size_Znear-offset)
+                throw std::runtime_error("self-block offset exceeds near matrix");
+            matrixBlock& block = blocks[box_test-box_start];
+            block.initmatrixBlock(n,n);
+            for (int row = 0; row < n; ++row) {
+                const int rwg = rwg_ind[first+row];
+                if (rwg < 0 || rwg >= num_rwgs || covered[rwg])
+                    throw std::runtime_error("invalid or repeated RWG index");
+                covered[rwg] = 1;
+                block.indrows[row] = block.indcols[row] = rwg;
+                for (int column = 0; column < n; ++column)
+                    block.assignvalue(row,column,matrix_Znear[offset+1LL*row*n+column]);
             }
+            block.factorize();
+            coefficients += count;
         }
+        for (const auto value : covered)
+            if (!value) throw std::runtime_error("leaf blocks do not cover every RWG");
+        blockdiagonalmatrix = blocks.release();
+        std::printf("Block preconditioner: %d pivoted LU blocks, %lld complex coefficients\n",num_boxes,coefficients);
+    } catch (const std::exception& error) {
+        std::fprintf(stderr,"Block preconditioner error at leaf box %d: %s\n",box_test,error.what());
+        std::exit(EXIT_FAILURE);
     }
-
-
-
-    printf("copying finished \n");
-
-    for(int box_test=box_start;box_test<box_end;box_test++){
-        mattest = blockdiagonalmatrix[box_test-box_start].submatrix;  
-        matsize = blockdiagonalmatrix[box_test-box_start].sizerow;
-        complex<double>** result = matrix_inverse(mattest, matsize);
-        for(int indr=0; indr<matsize; indr++){
-            for(int indc=0; indc<matsize; indc++){
-                blockdiagonalmatrix[box_test-box_start].assignvalue(indr,indc,result[indr][indc]);
-            }
-        }
-        for(int indr=0; indr<matsize; indr++)
-            delete[] result[indr];
-    }
-
-    printf("inverse operation finished \n");
-
-    //delete[] blockdiagonalmatrix;
-
-    std::cout.flush();
-    
 }

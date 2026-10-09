@@ -6,6 +6,8 @@ For Krylov arithmetic, true residuals, and termination reporting, see
 [README_KRYLOV.md](README_KRYLOV.md).
 For input compatibility, unsupported modes, and checked dimensions, see
 [README_INPUTS.md](README_INPUTS.md).
+For mode-1 pivoted block factorization and factor ownership, see
+[README_BLOCKS.md](README_BLOCKS.md).
 
 Run from the repository root:
 
