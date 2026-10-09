@@ -10,6 +10,8 @@ For mode-1 pivoted block factorization and factor ownership, see
 [README_BLOCKS.md](README_BLOCKS.md).
 For simulation ownership and reusable MLFMA workspace, see
 [README_WORKSPACE.md](README_WORKSPACE.md).
+For shared angular tables, interpolation stencils, and child shift phases, see
+[README_ANGULAR_CACHE.md](README_ANGULAR_CACHE.md).
 
 Run from the repository root:
 

@@ -47,6 +47,43 @@ static bool owners_empty() {
         !ffdir_theta && !ffdir_phi && !vec_farfield && !nodetrisindex && !aggregation &&
         !disaggregation && !blockdiagonalmatrix;
 }
+#if HAS_WORKSPACE
+// SFINAE keeps this driver usable with the archived rank-6 workspace.
+template<class Workspace>
+static auto check_tree_shifts(Workspace& workspace, int)
+    -> decltype(workspace.child_shifts(1,2,1.0,1.0),void()) {
+    size_t hits=0, fallbacks=0;
+    double maximum=0;
+    for (int approximate=0;approximate<2;++approximate) {
+        for (int level=(approximate ? 2 : 0);level<num_mlfmalevels-1;++level) {
+            const int nt=(approximate ? num_truncation_pc[level] : num_truncation[level])+1, np=2*nt;
+            const auto& table=workspace.child_shifts(nt,np,size_boxes[level],val_kO);
+            const auto& grid=workspace.grid(nt,np);
+            const int begin=num_filledboxes[num_mlfmalevels+level];
+            const int end=num_filledboxes[2*num_mlfmalevels+level]+1;
+            for (int parent=begin;parent<end;++parent)
+                for (int child=children[2*parent];child<=children[2*parent+1];++child) {
+                    double shift[3];
+                    for (int a=0;a<3;++a) shift[a]=box_pos[3*child+a]-box_pos[3*parent+a];
+                    const auto* phase=table.for_shift(shift);
+                    if (!phase) { ++fallbacks; continue; }
+                    ++hits;
+                    for (int t=0;t<nt;++t) for (int p=0;p<np;++p) {
+                        const double dot=shift[0]*(grid.sin_theta[t]*grid.cos_phi[p])+
+                                         shift[1]*(grid.sin_theta[t]*grid.sin_phi[p])+shift[2]*grid.cos_theta[t];
+                        const auto direct=exp(complex<double>(0,-val_kO)*dot);
+                        maximum=max(maximum,abs(phase[t*np+p]-direct));
+                        maximum=max(maximum,abs(conj(phase[t*np+p])-conj(direct)));
+                    }
+                }
+        }
+    }
+    require(hits>0 && maximum<=1e-12,"actual tree phase agreement");
+    printf("CHECK tree_shift_cache hits %zu fallbacks %zu tables %zu max_phase_error %.17g\n",
+           hits,fallbacks,workspace.shift_count(),maximum);
+}
+template<class Workspace> static void check_tree_shifts(Workspace&, long) {}
+#endif
 int main(int argc,char** argv) {
     if (argc<2) return 2;
     if (string(argv[1])=="cleanup") {
@@ -86,6 +123,9 @@ int main(int argc,char** argv) {
         dump("approximate"+to_string(k)+".bin",approximate[k]);
         calculate_farfield_mlfma(k,x[k].data()); fields[k]=field(k);
     }
+#if HAS_WORKSPACE
+    check_tree_shifts(mlfma_workspace(),0);
+#endif
     // Warm every requested team before checking storage stability. Runtime team
     // limits/dynamic adjustment remain authoritative; no requested-count indexing.
     for (int team : {1,2,8,32}) {

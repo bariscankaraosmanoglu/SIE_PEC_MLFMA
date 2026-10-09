@@ -728,3 +728,233 @@
 - Commit/push status: this entry accompanies the requested rank-6 commit.
   No push requested/performed. User input edits remain uncommitted; executable
   and temporary artifacts are preserved outside the commit.
+
+### 2026-10-09 13:58 UTC — Rank-7 angular and child shift caching
+- User request and authorized scope: Implement the proposed rank-7 scope:
+  complete angular-table sharing, verify interpolation caches, cache eight child
+  phases per required level/grid, integrate accurate/approximate operators and
+  accelerated fields, preserve lifetime/thread safety, and validate numerics and
+  resources. Full per-RWG radiation-pattern caching and Krylov storage excluded.
+  Preserve all artifacts. User subsequently approved the bounded validation plan.
+- Branch and starting HEAD: `codex/fix_rank7`, `96eaa30277ada80b39777026b1ef293fd6c35095`; working tree
+  initially clean, no pre-existing user changes. No input files modified.
+- Files and functions changed:
+  - `src/mlfma_workspace.h/.cpp`: `ChildShiftTable`, `for_shift()`,
+    `MlfmaWorkspace::child_shifts()`, `clear()`, `retained_bytes()`, `shift_count()`.
+  - `src/calculate_translationoperator.cpp`: `calculate_translationoperator()`
+    borrows existing angular arrays instead of regenerating/deleting them.
+  - `src/mvm_Zfardotx.cpp`, `src/mvm_Zfardotx_in.cpp`: upward/downward shift
+    loops reuse shared phase tables; downward uses conjugates.
+  - `src/calculate_farfield_mlfma.cpp`: upward shift loops reuse the same tables.
+  - `tests/angular_cache.cpp`, `tests/check_angular_cache.py`: focused cache,
+    stencil, phase-sign/octant, lifetime, key, bounds, and shared-read regression.
+  - `tests/workspace_operators.cpp`: actual-tree phase checks/reporting, with
+    template fallback preserving compatibility with archived rank-6 sources.
+  - `tests/README_ANGULAR_CACHE.md`, `tests/README.md`, and `HANDOFF.md`: scope,
+    commands, numerical limits, lifecycle, measurements, and continuation notes.
+- Changes and rationale: Rank 6 already cached grids/trig and interpolation
+  stencils for accurate/approximate operators and uniform output sampling.
+  Reuse those grids in translation setup. Add eight theta-major upward vectors
+  keyed by grid counts, sampling convention, parent width, and real wavenumber;
+  both polarizations/workers share them. Prepare before OpenMP loops. Select
+  octants from actual displacement signs, independent of occupied-child order.
+  Limit canonical-offset reuse to a phase-argument discrepancy of at most
+  `64*double_epsilon` radians; larger center-subtraction errors retain the old
+  dot product/exponential. Validate finite keys before map lookup and guard
+  allocation/phase overflow. Existing tree creation/cleanup clear all tables.
+- Expected numerical impact: Canonical shifts can introduce roundoff differences
+  relative to subtracting stored centers. The fallback protects poorly resolved
+  translated centers. No quadrature, interpolation order, truncation, precision,
+  compiler floating-point semantics, tolerances, iteration limits, or
+  accumulation order changed. No intended physics/formulation changes.
+- Validation plan: Untouched baseline archive/build first, baseline and updated
+  CFIE/reference/workspace checks; focused normal and ASan/UBSan cache checks;
+  normal/sanitizer thread suite through 32 requested workers; three sequential
+  before/after 100-pair timing trials. Baseline/current operator/field/solver
+  outputs compared at existing `1e-12` relative L2; physical residuals checked
+  against input tolerance using the untouched baseline verifier.
+- Approval received and its scope: User replied `approved` to the bounded plan
+  before runtime checks. Scope excludes large sphere/SOM and high-core throughput
+  benchmarks. Sandbox permission separately allowed ptrace-free leak checks.
+- Commands actually executed: Full exact suite/build/measurement commands and
+  redirects/locations are recorded in
+  `/tmp/mlfma-rank7-u598ls45/COMMANDS.md`; key commands:
+  - Baseline and updated `g++ -Wall -fexceptions -O3 -std=gnu++17 -fopenmp
+    <src>/*.cpp -o <retained executable>`.
+  - `python3 -B tests/check_cfie.py` (baseline `--source-dir` and updated).
+  - `python3 -B tests/check_workspace.py --input <24-RWG reference>`
+    (baseline, updated, updated `--sanitize`).
+  - `python3 -B tests/check_krylov_reference.py --solver <before/after>
+    --operator-driver <untouched baseline CFIE driver> --reference-input <fixture>`.
+  - `python3 -B tests/check_thread_parallel.py --input <reference>` and
+    `--sanitize`.
+  - `python3 -B tests/check_angular_cache.py` and `--sanitize`; after focused
+    edge-case additions, fresh normal and `--sanitize --skip-leaks` checks.
+  - Ptrace-free executions of the initial built `angular_cache` and short
+    `workspace_operators repeat 2 4` with ASan/UBSan/LSan enabled.
+  - `python3 -B <artifacts>/compare.py`, `benchmark.py`, and timing postprocessing.
+  - Git status/diff checks, new-file review, Python AST syntax inspection,
+    CRLF-aware diff whitespace check, and final source/artifact hash recording.
+- Build outcome: Both production builds pass with GCC 11.4.0 and the prescribed
+  flags; 38 existing warnings before/after. Executables retained under artifacts;
+  no original root executable existed to remove or overwrite.
+- Test outcome:
+  - Baseline/current CFIE and all ten full Krylov reference cases pass, including
+    modes 0/1/2, repeated illuminations, iteration limits, invalid-inner rejection,
+    and independent physical residuals. Existing direct-MoM reference checks pass.
+  - All 296 compared numerical files satisfy `1e-12` relative L2; 212 byte-identical,
+    maximum difference `6.471349606033712e-13`. Binary vector/matrix maximum
+    `3.5739041886468144e-13`; current coefficient maximum
+    `2.923771686956958e-13`; triangle-current text unchanged. Status, iterations,
+    and product counts match. Timing comparisons: 30 files pass, 18 byte-identical,
+    maximum difference `7.605512258971646e-15`.
+  - Normal/sanitizer thread cases pass disabled/limited/dynamic teams and requests
+    1/2/8/16/32. Focused phase maximum error `4.4754520913118096e-16`;
+    actual tree: 32 hits, zero fallbacks, four phase tables, maximum phase error
+    `7.0216669371534024e-16`. Forced cancellation selects the direct fallback.
+  - Repeated workspace products have zero differences; accelerated fields repeat
+    identically. Retained capacity stable after warmup; cleanup/rebuild passes.
+    Final focused normal/ASan/UBSan includes one-theta Gauss grids and bounds.
+  - Initial focused and workspace leak checks failed because LSan cannot inspect
+    ptrace. The identical built binaries passed outside ptrace with no leaks;
+    failed and successful logs retained. Address/UB checks pass. Final focused
+    edge-case rerun uses leaks disabled; production code did not change.
+- Measurements and output locations:
+  - Hardware: i7-7700HQ, four physical/eight logical CPUs. 24 RWGs, 12 nodes,
+    16 triangles, two separated closed octahedra, 1 GHz, automatic tree, digits 6,
+    interpolation 4, approximation 0.8, mode 2, tolerance 0.001. Source and all
+    numerical settings identical before/after. Requested eight workers for
+    100 accurate/approximate pairs; warmup through 32; OMP_DYNAMIC=FALSE,
+    OMP_THREAD_LIMIT unset. Six accelerated outputs included.
+  - Three sequential paired trials after other builds/checks finished. Median
+    complete operator-driver wall seconds `1.18 / 1.18`; repeated-section seconds
+    `0.874590106 / 0.856026532` (-2.12%); peak RSS KiB `38064 / 38880`
+    (+816 KiB, +2.14%). Includes setup/assembly/warmup/products/field I/O/checks/
+    cleanup; this is NOT a full-solver timing comparison. Small-case variation
+    prevents a reliable throughput-gain claim.
+  - Workspace payload/capacity `8045800 / 8839208` bytes (+793408 bytes,
+    approximately 0.76 MiB), including 32 warmed worker buffers. New phase
+    payload is shared, independent of worker/box count; cleanup reaches zero.
+  - Everything retained at `/tmp/mlfma-rank7-u598ls45`: baseline sources/binaries,
+    normal/sanitizer builds/logs/inputs/outputs, both ptrace failures and reruns,
+    `comparison.json`, `timing/summary.json`, `timing/numerical-comparison.json`,
+    `metadata.json`, `COMMANDS.md`, and final manifest.
+- Remaining uncertainty or pending work: No approved bounded check remains
+  pending. Large sphere/SOM simulations, throughput on >16 physical cores, and
+  full solver performance repetitions NOT RUN; require expanded approval.
+  The prior large mode-1 physical residual failure is not changed or revalidated
+  by this optimization. Global solver state remains nonreentrant. Cache memory
+  scales with angular sample counts; higher truncation can increase peak RSS.
+- Commit/push status: Uncommitted and unpushed; neither requested for rank 7.
+
+- Additional review compilation: the extended workspace driver compiles against
+  the untouched rank-6 headers, confirming its legacy-cache diagnostic fallback:
+  `g++ -O3 -std=gnu++17 -fopenmp -I/tmp/mlfma-rank7-u598ls45/before/src
+  -c tests/workspace_operators.cpp -o <artifacts>/workspace-baseline-compat.o`.
+  Build passed; no additional simulation/test execution.
+
+### 2026-10-09 14:43 UTC — Rank-7 sphere23 full performance comparison
+- User request and authorized scope: User explicitly requested performance for
+  `test_23_sphere_0p01m.pnu`; one sequential pre-rank-7/current-rank-7 full run
+  with the current input unchanged. All artifacts retained. This expands the
+  earlier bounded rank-7 validation to this specific large case only.
+- Branch and starting HEAD: `codex/fix_rank7`, `96eaa30277ada80b39777026b1ef293fd6c35095`. Existing 13-file
+  uncommitted rank-7 implementation/tests/docs preserved. No new user changes.
+- Files and functions changed: Only CHANGELOG_DEV.md and HANDOFF.md measurement
+  notes. No solver function, input, test, binary, or numerical setting changed.
+  Runner, analyzer, report, and all outputs retained in the task's /tmp directory.
+- Changes and rationale: Document the large-case runtime/memory effect of shared
+  angular/child-phase caching, keeping numerical comparisons traceable.
+- Expected numerical impact: No additional implementation changes. Rank-7
+  canonical shifts can cause small roundoff/serialized phase differences.
+- Validation plan: Verify original validated manifest and binary hashes; copy
+  identical current inputs/binaries; one timed baseline/current pair; compare
+  all five result files, convergence, iterations/products, physical residuals,
+  currents, fields, and RSS/HWM samples. No rebuild or extra reference cases.
+- Approval received and its scope: The explicit user request authorizes this
+  test under AGENTS.md section 5. Current settings were stated before execution:
+  181 illuminations, mode 2, eight workers; estimated total 30–45 minutes and
+  300–450 MiB peak per run. No additional repetitions/modes authorized or run.
+- Commands actually executed:
+  - `python3 -B /tmp/mlfma-rank7-sphere23-before-after-beiek8po/run_comparison.py`.
+    Each directory executes `/usr/bin/time -v -o resources.txt ./run_mlfma`,
+    OMP_DYNAMIC=FALSE, OMP_NUM_THREADS=8, OMP_THREAD_LIMIT unset.
+  - `python3 -B /tmp/mlfma-rank7-sphere23-before-after-beiek8po/analyze_results.py`.
+  - Read-only Git status/diff and hash checks; original 102-file validated
+    manifest, baseline sources, both binaries, and input verified before/after
+    execution, before notes changed. Python syntax inspection and final diff
+    review; no simulation reruns or profiling commands.
+- Build outcome: NOT REBUILT — retained validated production executables used;
+  GCC 11.4.0, `-Wall -fexceptions -O3 -std=gnu++17 -fopenmp` unchanged.
+- Test outcome: Both exit 0, all 181 illuminations converge within tolerance
+  0.001. All per-angle statuses/iterations/products match: 727 outer iterations,
+  1,089 reported outer Krylov products. Max physical residual before/after:
+  `9.339770740679938e-4 / 9.339770740680052e-4`; max per-angle residual difference
+  `6.722053469410127e-17`. Triangle-current/contribution outputs byte-identical.
+  RWG coefficient relative L2 `3.1152824592975693e-14`; complex field relative L2
+  `3.4240044988447706e-14`, both below unchanged `1e-12` comparison threshold.
+  One weak cross-polarized field phase changes by `1e-8` radians in its last
+  printed digit. Raw mixed-unit field-column norm `3.2950531536299743e-12`
+  exceeds `1e-12`; this failed raw diagnostic is explicitly retained separately
+  from the passing physical complex-field comparison. No tolerance/reference
+  changes. Field phases reconstructed in radians per calculate_farfield().
+- Measurements and output locations: 37,587 RWGs, 12,531 nodes, 25,058 triangles,
+  3 GHz, six levels, digits 2, interpolation 2, approximation 0.3, mode 2,
+  outer/inner limits 100/10, tolerance 0.001. Theta 90, phi 0..360 (181),
+  polarization 0, direct monostatic output. Eight workers/observed threads,
+  i7-7700HQ (four physical/eight logical CPUs); sequential full runs.
+  Full wall seconds `1071.43 / 972.46` (-9.24%, 98.97 s saved);
+  solution-stage seconds `1070.264144 / 971.282542` (-9.25%). Peak RSS KiB
+  `287656 / 287960` (+304 KiB, +0.30 MiB, +0.106%). The new table payload
+  calculated from truncations is 262 KiB, consistent with this small increase;
+  allocator contribution not profiled. RSS/HWM nearly flat after first solve.
+  Full wall includes setup, all solves/residuals, fields/output, and cleanup.
+  Everything retained at `/tmp/mlfma-rank7-sphere23-before-after-beiek8po`,
+  including README.md, metadata.json, summary.json, raw resource/log/status files,
+  copied inputs/binaries, scripts, memory samples, and source/artifact hashes.
+- Remaining uncertainty or pending work: One pair establishes the observed
+  difference, not a statistically reliable speedup across systems. No extra
+  repetitions, mode-1 rerun, SOM case, or >16-core throughput test performed.
+  No pending check for the authorized pair. Numerical print rounding explains
+  the raw field-column diagnostic; physical coefficients/fields remain within
+  the unchanged comparisons and residual tolerance.
+- Commit/push status: Rank-7 changes remain uncommitted and unpushed.
+
+### 2026-10-09 14:48 UTC — Commit rank-7 angular and child shift caches
+- User request and authorized scope: Commit the completed rank-7 source, focused
+  regression tests, and development/validation notes on the current branch.
+  Inputs and retained artifacts excluded; no push requested.
+- Branch and starting HEAD: `codex/fix_rank7`,
+  `96eaa30277ada80b39777026b1ef293fd6c35095`.
+- Files and functions changed: No source/test changes during commit preparation.
+  HANDOFF.md records the requested commit; this change log appends commit scope.
+  The commit includes the six previously validated production files, five test/
+  test-documentation files, and these two root development notes (13 files).
+- Changes and rationale: Record the shared angular/child-phase caching work and
+  its numerical/resource evidence as one reviewable commit. Full radiation-
+  pattern caching and Krylov storage remain excluded.
+- Expected numerical impact: None beyond the documented and validated rank-7
+  roundoff differences; no new numerical changes for commit preparation.
+- Validation plan: Verify source/test/input/executable hashes against the final
+  retained manifests, inspect tracked/untracked and staged diffs, check scope
+  and whitespace, and verify HEAD/working-tree state after committing.
+- Approval received and its scope: User explicitly requested committing these
+  changes. Earlier bounded and sphere-case test approvals remain recorded above.
+- Commands actually executed before staging: Read-only Git branch/HEAD/status,
+  hook/config and diff inspection, final manifest SHA-256 comparisons, and
+  CRLF-aware diff whitespace checks. Authorized commit sequence uses explicit
+  file staging and message `Cache MLFMA angular tables and child shift phases`;
+  staged diff is reviewed before the commit.
+- Build outcome: Reused successful validated production builds; no rebuild.
+- Test outcome: NOT RERUN for commit preparation. All 98 source/test hashes match
+  the final snapshot; both binaries and current sphere input are unchanged.
+  Existing small regressions, sanitizers/leak reruns, and sphere evidence are
+  recorded above. No active Git hooks were found.
+- Measurements and output locations: No new measurements. Retain all artifacts
+  at `/tmp/mlfma-rank7-u598ls45` and
+  `/tmp/mlfma-rank7-sphere23-before-after-beiek8po`.
+- Remaining uncertainty or pending work: Existing documented limits remain:
+  single large timing pair, no >16-core throughput measurement, and one printed
+  weak-field phase digit differs while physical complex-field comparison passes.
+- Commit/push status: This entry accompanies the requested rank-7 commit. The
+  resulting identifier is reported after creation; no push is authorized.
