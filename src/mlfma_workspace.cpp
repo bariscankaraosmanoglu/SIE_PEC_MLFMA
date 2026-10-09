@@ -1,5 +1,6 @@
 #include "mlfma_workspace.h"
 #include <climits>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <exception>
@@ -65,6 +66,50 @@ InterpolationTable& MlfmaWorkspace::table(int ct, int cp, int ft, int fp, int or
     return tables_.emplace(key,std::move(value)).first->second;
 }
 
+const ChildShiftTable& MlfmaWorkspace::child_shifts(int theta, int phi, double width,
+                                                 double k, bool linear) {
+    // Validate floating-point keys before using the map (NaN has no ordering).
+    if (!std::isfinite(width) || width/4 <= 0 || !std::isfinite(k) || k <= 0)
+        throw std::invalid_argument("child shift requires finite positive box width and wavenumber");
+    const ShiftKey key{theta,phi,linear,width,k};
+    auto found = shifts_.find(key);
+    if (found != shifts_.end()) return found->second;
+    const auto count = product(theta,phi,8);
+    const auto& g = grid(theta,phi,linear);
+    ChildShiftTable value{width,k,count/8,{}};
+    value.upward.resize(count);
+    const std::complex<double> i{0,1};
+    for (int octant=0; octant<8; ++octant) {
+        const double dx = (octant&1 ? 1 : -1)*(width/4);
+        const double dy = (octant&2 ? 1 : -1)*(width/4);
+        const double dz = (octant&4 ? 1 : -1)*(width/4);
+        for (int t=0; t<theta; ++t) for (int p=0; p<phi; ++p) {
+            const double dot = dx*(g.sin_theta[t]*g.cos_phi[p])
+                             +dy*(g.sin_theta[t]*g.sin_phi[p])+dz*g.cos_theta[t];
+            const double argument = k*dot;
+            if (!std::isfinite(argument)) throw std::overflow_error("child shift phase is not finite");
+            value.upward[octant*value.samples+std::size_t(t)*phi+p] = std::exp(-i*k*dot);
+        }
+    }
+    return shifts_.emplace(key,std::move(value)).first->second;
+}
+
+const std::complex<double>* ChildShiftTable::for_shift(const double displacement[3]) const {
+    unsigned octant = 0;
+    double error = 0;
+    for (unsigned axis=0; axis<3; ++axis) {
+        if (!std::isfinite(displacement[axis]) || displacement[axis]==0) return nullptr;
+        if (displacement[axis]>0) octant |= 1u<<axis;
+        const double expected = (displacement[axis]>0 ? 1 : -1)*(parent_width/4);
+        error += std::abs(displacement[axis]-expected);
+    }
+    // |khat.axis| <= 1, so this bounds the phase-argument change in radians.
+    // Large translated coordinates may lose precision in center subtraction;
+    // retain the old formula there rather than silently assuming ideal offsets.
+    if (error*wavenumber > 64*std::numeric_limits<double>::epsilon()) return nullptr;
+    return upward.data()+octant*samples;
+}
+
 void InterpolationScratch::prepare(int ct, int cp, int ft) {
     inflated_theta.resize(product(ct,cp,3));
     half.resize(product(ft,cp));
@@ -92,7 +137,7 @@ MlfmaScratch& MlfmaWorkspace::worker() {
     return workers_.at(omp_get_thread_num());
 }
 void MlfmaWorkspace::clear() {
-    grids_.clear(); tables_.clear();
+    grids_.clear(); tables_.clear(); shifts_.clear();
     std::vector<MlfmaScratch>().swap(workers_);
 }
 std::size_t MlfmaWorkspace::retained_bytes() const {
@@ -106,6 +151,8 @@ std::size_t MlfmaWorkspace::retained_bytes() const {
         const auto& t = entry.second;
         total += sizeof(entry)+bytes(t.theta_weights)+bytes(t.phi_weights)+bytes(t.theta_indices)+bytes(t.phi_indices);
     }
+    for (const auto& entry : shifts_)
+        total += sizeof(entry)+bytes(entry.second.upward);
     for (const auto& w : workers_)
         total += bytes(w.fine_theta)+bytes(w.fine_phi)+bytes(w.coarse_theta)+bytes(w.coarse_phi)
                  +bytes(w.interpolation.inflated_theta)+bytes(w.interpolation.half)+bytes(w.interpolation.inflated_phi);

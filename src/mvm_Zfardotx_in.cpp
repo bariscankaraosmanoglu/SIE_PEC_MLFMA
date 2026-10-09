@@ -178,6 +178,8 @@ void mvm_Zfardotx_in(complex<double> x[], complex<double> y[]){
         int num_coarsesample_theta=numberofterms+1;
         int num_coarsesample_phi=num_coarsesample_theta*2;
         auto& fine_grid = workspace.grid(num_finesample_theta,num_finesample_phi);
+        const auto& phases = workspace.child_shifts(num_finesample_theta,num_finesample_phi,
+                                                    size_boxes[indlev],val_kO);
         auto& weights = workspace.table(num_coarsesample_theta,num_coarsesample_phi,
                                         num_finesample_theta,num_finesample_phi,num_interpol);
         double* sintheta = fine_grid.sin_theta.data();
@@ -222,6 +224,7 @@ void mvm_Zfardotx_in(complex<double> x[], complex<double> y[]){
                     shiftvector[0]=childbasisboxcenter[0]-parentbasisboxcenter[0];
                     shiftvector[1]=childbasisboxcenter[1]-parentbasisboxcenter[1];
                     shiftvector[2]=childbasisboxcenter[2]-parentbasisboxcenter[2];
+                    const complex<double>* shift_phase = phases.for_shift(shiftvector);
                     long int ind_child=agg_index_pc[box_child];
                     int ind_temp=0;
                     for(int ind=0;ind<(num_finesample_theta*num_finesample_phi);ind++){
@@ -247,11 +250,14 @@ void mvm_Zfardotx_in(complex<double> x[], complex<double> y[]){
                     ind_temp=0;
                     for(int indtheta=0;indtheta<num_finesample_theta;indtheta++){
                         for(int indphi=0;indphi<num_finesample_phi;indphi++){
-                            khat[0]=sintheta[indtheta]*cosphi[indphi];
-                            khat[1]=sintheta[indtheta]*sinphi[indphi];
-                            khat[2]=costheta[indtheta];
-                            dotval=dotProduct3d(shiftvector,khat);
-                            expfactor=exp(-i*val_kO*dotval);
+                            if (shift_phase) expfactor=shift_phase[ind_temp];
+                            else {
+                                khat[0]=sintheta[indtheta]*cosphi[indphi];
+                                khat[1]=sintheta[indtheta]*sinphi[indphi];
+                                khat[2]=costheta[indtheta];
+                                dotval=dotProduct3d(shiftvector,khat);
+                                expfactor=exp(-i*val_kO*dotval);
+                            }
                             aggregation[ind_parent*2+0]+=expfactor*temp_fine_theta[ind_temp];
                             aggregation[ind_parent*2+1]+=expfactor*temp_fine_phi[ind_temp];
                             ind_temp++;
@@ -335,6 +341,8 @@ void mvm_Zfardotx_in(complex<double> x[], complex<double> y[]){
         int num_coarsesample_theta=numberofterms+1;
         int num_coarsesample_phi=num_coarsesample_theta*2;
         auto& fine_grid = workspace.grid(num_finesample_theta,num_finesample_phi);
+        const auto& phases = workspace.child_shifts(num_finesample_theta,num_finesample_phi,
+                                                    size_boxes[indlev],val_kO);
         auto& weights = workspace.table(num_coarsesample_theta,num_coarsesample_phi,
                                         num_finesample_theta,num_finesample_phi,num_interpol);
         double* sintheta = fine_grid.sin_theta.data();
@@ -380,6 +388,7 @@ void mvm_Zfardotx_in(complex<double> x[], complex<double> y[]){
                     shiftvector[0]=childtestboxcenter[0]-parenttestboxcenter[0];
                     shiftvector[1]=childtestboxcenter[1]-parenttestboxcenter[1];
                     shiftvector[2]=childtestboxcenter[2]-parenttestboxcenter[2];
+                    const complex<double>* shift_phase = phases.for_shift(shiftvector);
                     long int ind_parent=agg_index_pc[box_parent];
 
                     int ind_temp=0;
@@ -393,11 +402,14 @@ void mvm_Zfardotx_in(complex<double> x[], complex<double> y[]){
                     }
                     for(int indtheta=0;indtheta<num_finesample_theta;indtheta++){
                         for(int indphi=0;indphi<num_finesample_phi;indphi++){
-                            khat[0]=sintheta[indtheta]*cosphi[indphi];
-                            khat[1]=sintheta[indtheta]*sinphi[indphi];
-                            khat[2]=costheta[indtheta];
-                            dotval=dotProduct3d(shiftvector,khat);
-                            expfactor=exp(i*val_kO*dotval);
+                            if (shift_phase) expfactor=conj(shift_phase[ind_temp]);
+                            else {
+                                khat[0]=sintheta[indtheta]*cosphi[indphi];
+                                khat[1]=sintheta[indtheta]*sinphi[indphi];
+                                khat[2]=costheta[indtheta];
+                                dotval=dotProduct3d(shiftvector,khat);
+                                expfactor=exp(i*val_kO*dotval);
+                            }
                             temp_fine_theta[ind_temp]=expfactor*disaggregation[ind_parent*2+0];
                             temp_fine_phi[ind_temp]=expfactor*disaggregation[ind_parent*2+1];
                             ind_temp++;
