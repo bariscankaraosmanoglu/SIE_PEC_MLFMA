@@ -146,12 +146,7 @@ void calculate_translationoperator(){
             phi_locations_weights(numberofphis, phiweights, philocations);
             calculate_sin_cos(numberofthetas,numberofphis, thetalocations, philocations, sintheta, costheta, sinphi, cosphi);
 
-            hankelvalue=new complex<double>[numberofterms+1];
-            legendrevalue=new double[numberofterms+1];
-            for(int ind=0; ind<(numberofterms+1); ind++){
-                legendrevalue[ind]=0.0;
-                hankelvalue[ind]=complex<double>(0.0, 0.0);
-            }
+            // Each worker owns the temporary arrays allocated in its loop below.
 
             omp_set_num_threads(num_threads);
             #pragma omp parallel if(parallel_omp_on)

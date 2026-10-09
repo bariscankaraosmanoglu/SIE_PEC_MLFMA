@@ -102,6 +102,8 @@ def main():
     flags += ["-O1","-g","-fsanitize=address,undefined,float-cast-overflow","-fno-omit-frame-pointer"] if args.sanitize else ["-O3"]
     files=["read_simulationinput.cpp","generate_edgeconnection.cpp","surface_components.cpp","generate_octtree.cpp"]
     if (source/"input_validation.cpp").exists():files.append("input_validation.cpp")
+    if (source/"mlfma_workspace.cpp").exists():
+        files += ["mlfma_workspace.cpp","sample_locations_weights.cpp","interpolationweights.cpp"]
     command=["g++",*flags,str(ROOT/"tests/input_validation.cpp"),*[str(source/p) for p in files],"-o",str(output/"input_validation")]
     (output/"build-command.json").write_text(json.dumps(command,indent=2)+"\n")
     with (output/"build.log").open("w") as log:subprocess.run(command,stdout=log,stderr=log,check=True)

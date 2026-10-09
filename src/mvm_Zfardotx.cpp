@@ -1,3 +1,4 @@
+#include "mlfma_workspace.h"
 #include "solver_globals.h"
 #include <stdio.h>
 #include <complex>
@@ -45,6 +46,7 @@ void crossProduct3d(double vec1[], double vec2[], double resvec[]);
 double dotProduct3d(double vec1[], double vec2[]);
 
 void mvm_Zfardotx(complex<double> x[], complex<double> y[]){
+    auto& workspace = mlfma_workspace();
     //
     //
     // mvm_Zfardotx
@@ -73,6 +75,7 @@ void mvm_Zfardotx(complex<double> x[], complex<double> y[]){
     // Shifted patterns are multiplied with the given complex coefficients.
     box_start=num_filledboxes[num_mlfmalevels*2-1];
     box_end=num_filledboxes[num_mlfmalevels*3-1]+1;
+    const auto& leaf_grid = workspace.grid(num_truncation[num_mlfmalevels-1]+1,2*(num_truncation[num_mlfmalevels-1]+1));
     omp_set_num_threads(num_threads);
 
     #pragma omp parallel if(parallel_omp_on) shared(aggregation,x)
@@ -84,17 +87,10 @@ void mvm_Zfardotx(complex<double> x[], complex<double> y[]){
         int numberofterms=num_truncation[num_mlfmalevels-1];
         int numberofthetas=numberofterms+1;
         int numberofphis=numberofthetas*2;
-        double *thetalocations, *thetaweights;
-        double *philocations, *phiweights;
-        double *sintheta, *costheta, *sinphi, *cosphi;
-        thetalocations=new double[numberofthetas];
-        thetaweights=new double[numberofthetas];
-        philocations=new double[numberofphis];
-        phiweights=new double[numberofphis];
-        sintheta=new double[numberofthetas];
-        costheta=new double[numberofthetas];
-        sinphi=new double[numberofphis];
-        cosphi=new double[numberofphis];
+        const double* sintheta = leaf_grid.sin_theta.data();
+        const double* costheta = leaf_grid.cos_theta.data();
+        const double* sinphi = leaf_grid.sin_phi.data();
+        const double* cosphi = leaf_grid.cos_phi.data();
         int basisnode1,basisnode2,basisnode3;
         double basisnode1loc[3],basisnode2loc[3],basisnode3loc[3],basislocation[3];
         double basislength,basissign,basisvector[3];
@@ -104,9 +100,6 @@ void mvm_Zfardotx(complex<double> x[], complex<double> y[]){
         int indtheta,indphi;
         complex<double> val_x;
 
-        theta_locations_weights(numberofthetas, thetaweights, thetalocations);
-        phi_locations_weights(numberofphis, phiweights, philocations);
-        calculate_sin_cos(numberofthetas,numberofphis, thetalocations, philocations, sintheta, costheta, sinphi, cosphi);
 
         int tid=omp_get_thread_num();
         double timer_start = omp_get_wtime();
@@ -184,59 +177,40 @@ void mvm_Zfardotx(complex<double> x[], complex<double> y[]){
         numberofterms=num_truncation[indlev+1];
         int num_coarsesample_theta=numberofterms+1;
         int num_coarsesample_phi=num_coarsesample_theta*2;
-        double *fine_thetaloc, *fine_thetawei;
-        double *fine_philoc, *fine_phiwei;
-        double *sintheta, *costheta, *sinphi, *cosphi;
-        double *coarse_thetaloc, *coarse_thetawei;
-        double *coarse_philoc, *coarse_phiwei;
-        double *inter_weights_theta, *inter_weights_phi;
-        int *indexloc_theta, *indexloc_phi;
+        auto& fine_grid = workspace.grid(num_finesample_theta,num_finesample_phi);
+        auto& weights = workspace.table(num_coarsesample_theta,num_coarsesample_phi,
+                                        num_finesample_theta,num_finesample_phi,num_interpol);
+        double* sintheta = fine_grid.sin_theta.data();
+        double* costheta = fine_grid.cos_theta.data();
+        double* sinphi = fine_grid.sin_phi.data();
+        double* cosphi = fine_grid.cos_phi.data();
+        double* inter_weights_theta = weights.theta_weights.data();
+        double* inter_weights_phi = weights.phi_weights.data();
+        int* indexloc_theta = weights.theta_indices.data();
+        int* indexloc_phi = weights.phi_indices.data();
         complex<double> *temp_fine_theta, *temp_fine_phi;
         complex<double> *temp_coarse_theta, *temp_coarse_phi;
-
-        fine_thetaloc=new double[num_finesample_theta];
-        fine_thetawei=new double[num_finesample_theta];
-        fine_philoc=new double[num_finesample_phi];
-        fine_phiwei=new double[num_finesample_phi];
-        sintheta=new double[num_finesample_theta];
-        costheta=new double[num_finesample_theta];
-        sinphi=new double[num_finesample_phi];
-        cosphi=new double[num_finesample_phi];
-        coarse_thetaloc=new double [num_coarsesample_theta];
-        coarse_thetawei=new double [num_coarsesample_theta];
-        coarse_philoc=new double [num_coarsesample_phi];
-        coarse_phiwei=new double [num_coarsesample_phi];
-
-        theta_locations_weights(num_finesample_theta, fine_thetawei, fine_thetaloc);
-        phi_locations_weights(num_finesample_phi, fine_phiwei, fine_philoc);
-        theta_locations_weights(num_coarsesample_theta, coarse_thetawei, coarse_thetaloc);
-        phi_locations_weights(num_coarsesample_phi, coarse_phiwei, coarse_philoc);
-
-        inter_weights_theta=new double [num_finesample_theta*2*num_interpol];
-        indexloc_theta=new int [num_finesample_theta*2*num_interpol];
-        inter_weights_phi=new double [num_finesample_phi*2*num_interpol];
-        indexloc_phi=new int [num_finesample_phi*2*num_interpol];
-        interpolationweights(num_coarsesample_theta,num_finesample_theta,num_interpol,0,coarse_thetaloc,fine_thetaloc,inter_weights_theta,indexloc_theta);
-        interpolationweights(num_coarsesample_phi,num_finesample_phi,num_interpol,1,coarse_philoc,fine_philoc,inter_weights_phi,indexloc_phi);
 
         box_start=num_filledboxes[num_mlfmalevels*1+indlev];
         box_end=num_filledboxes[num_mlfmalevels*2+indlev]+1;
 
-        calculate_sin_cos(num_finesample_theta,num_finesample_phi,fine_thetaloc,fine_philoc,sintheta,costheta,sinphi,cosphi);
         omp_set_num_threads(num_threads);
         #pragma omp parallel if(parallel_omp_on) shared(aggregation) private(temp_fine_theta,temp_fine_phi,\
                                                                              temp_coarse_theta,temp_coarse_phi)
         {
+            workspace.prepare_team();
             double shiftvector[3];
             double khat[3]{0.0, 0.0, 0.0};
             double dotval;
             complex<double> expfactor;
             double timer_start = omp_get_wtime();
             double timer_total = 0.0;
-            temp_fine_theta=new complex<double> [num_finesample_theta*num_finesample_phi];
-            temp_fine_phi=new complex<double> [num_finesample_theta*num_finesample_phi];
-            temp_coarse_theta=new complex<double> [num_coarsesample_theta*num_coarsesample_phi];
-            temp_coarse_phi=new complex<double> [num_coarsesample_theta*num_coarsesample_phi];
+            auto& scratch = workspace.worker();
+            scratch.prepare(num_coarsesample_theta,num_coarsesample_phi,num_finesample_theta,num_finesample_phi);
+            temp_fine_theta = scratch.fine_theta.data();
+            temp_fine_phi = scratch.fine_phi.data();
+            temp_coarse_theta = scratch.coarse_theta.data();
+            temp_coarse_phi = scratch.coarse_phi.data();
             #pragma omp for schedule(dynamic)
             for(int box_parent=box_start;box_parent<box_end;box_parent++){
                 double timer_in = omp_get_wtime();
@@ -266,8 +240,8 @@ void mvm_Zfardotx(complex<double> x[], complex<double> y[]){
                             ind_child++;
                         }
                     }
-                    interpolation_c2f(num_coarsesample_theta,num_coarsesample_phi,num_finesample_theta,num_finesample_phi,num_interpol,indexloc_theta,indexloc_phi,inter_weights_theta,inter_weights_phi,temp_coarse_theta,temp_fine_theta);
-                    interpolation_c2f(num_coarsesample_theta,num_coarsesample_phi,num_finesample_theta,num_finesample_phi,num_interpol,indexloc_theta,indexloc_phi,inter_weights_theta,inter_weights_phi,temp_coarse_phi,temp_fine_phi);
+                    interpolation_c2f(num_coarsesample_theta,num_coarsesample_phi,num_finesample_theta,num_finesample_phi,num_interpol,indexloc_theta,indexloc_phi,inter_weights_theta,inter_weights_phi,temp_coarse_theta,temp_fine_theta,scratch.interpolation);
+                    interpolation_c2f(num_coarsesample_theta,num_coarsesample_phi,num_finesample_theta,num_finesample_phi,num_interpol,indexloc_theta,indexloc_phi,inter_weights_theta,inter_weights_phi,temp_coarse_phi,temp_fine_phi,scratch.interpolation);
                     long int ind_parent=agg_index[box_parent];
 
                     ind_temp=0;
@@ -288,29 +262,10 @@ void mvm_Zfardotx(complex<double> x[], complex<double> y[]){
 
                 timer_total+=omp_get_wtime()-timer_in;
             }
-            delete[] temp_fine_theta;
-            delete[] temp_fine_phi;
-            delete[] temp_coarse_theta;
-            delete[] temp_coarse_phi;
+
             double timer_end = omp_get_wtime();
 //            fprintf(file_timer,"MVMFarAgg%d %d %1.5f %1.5f \n", indlev, omp_get_thread_num(), timer_end-timer_start, timer_total );
         }
-        delete[] fine_thetaloc;
-        delete[] fine_thetawei;
-        delete[] fine_philoc;
-        delete[] fine_phiwei;
-        delete[] sintheta;
-        delete[] costheta;
-        delete[] sinphi;
-        delete[] cosphi;
-        delete[] coarse_thetaloc;
-        delete[] coarse_thetawei;
-        delete[] coarse_philoc;
-        delete[] coarse_phiwei;
-        delete[] inter_weights_theta;
-        delete[] indexloc_theta;
-        delete[] inter_weights_phi;
-        delete[] indexloc_phi;
     }
 
 
@@ -379,48 +334,28 @@ void mvm_Zfardotx(complex<double> x[], complex<double> y[]){
         numberofterms=num_truncation[indlev+1];
         int num_coarsesample_theta=numberofterms+1;
         int num_coarsesample_phi=num_coarsesample_theta*2;
-        double *fine_thetaloc, *fine_thetawei;
-        double *fine_philoc, *fine_phiwei;
-        double *sintheta, *costheta, *sinphi, *cosphi;
-        double *coarse_thetaloc, *coarse_thetawei;
-        double *coarse_philoc, *coarse_phiwei;
-        double *inter_weights_theta, *inter_weights_phi;
-        int *indexloc_theta, *indexloc_phi;
+        auto& fine_grid = workspace.grid(num_finesample_theta,num_finesample_phi);
+        auto& weights = workspace.table(num_coarsesample_theta,num_coarsesample_phi,
+                                        num_finesample_theta,num_finesample_phi,num_interpol);
+        double* sintheta = fine_grid.sin_theta.data();
+        double* costheta = fine_grid.cos_theta.data();
+        double* sinphi = fine_grid.sin_phi.data();
+        double* cosphi = fine_grid.cos_phi.data();
+        double* inter_weights_theta = weights.theta_weights.data();
+        double* inter_weights_phi = weights.phi_weights.data();
+        int* indexloc_theta = weights.theta_indices.data();
+        int* indexloc_phi = weights.phi_indices.data();
         complex<double> *temp_fine_theta, *temp_fine_phi;
         complex<double> *temp_coarse_theta, *temp_coarse_phi;
-        fine_thetaloc=new double[num_finesample_theta];
-        fine_thetawei=new double[num_finesample_theta];
-        fine_philoc=new double[num_finesample_phi];
-        fine_phiwei=new double[num_finesample_phi];
-        sintheta=new double[num_finesample_theta];
-        costheta=new double[num_finesample_theta];
-        sinphi=new double[num_finesample_phi];
-        cosphi=new double[num_finesample_phi];
-        coarse_thetaloc=new double [num_coarsesample_theta];
-        coarse_thetawei=new double [num_coarsesample_theta];
-        coarse_philoc=new double [num_coarsesample_phi];
-        coarse_phiwei=new double [num_coarsesample_phi];
-
-        theta_locations_weights(num_finesample_theta, fine_thetawei, fine_thetaloc);
-        phi_locations_weights(num_finesample_phi, fine_phiwei, fine_philoc);
-        theta_locations_weights(num_coarsesample_theta, coarse_thetawei, coarse_thetaloc);
-        phi_locations_weights(num_coarsesample_phi, coarse_phiwei, coarse_philoc);
-
-        inter_weights_theta=new double [num_finesample_theta*2*num_interpol];
-        indexloc_theta=new int [num_finesample_theta*2*num_interpol];
-        inter_weights_phi=new double [num_finesample_phi*2*num_interpol];
-        indexloc_phi=new int [num_finesample_phi*2*num_interpol];
-        interpolationweights(num_coarsesample_theta,num_finesample_theta,num_interpol,0,coarse_thetaloc,fine_thetaloc,inter_weights_theta,indexloc_theta);
-        interpolationweights(num_coarsesample_phi,num_finesample_phi,num_interpol,1,coarse_philoc,fine_philoc,inter_weights_phi,indexloc_phi);
 
         box_start=num_filledboxes[num_mlfmalevels*1+indlev];
         box_end=num_filledboxes[num_mlfmalevels*2+indlev]+1;
 
-        calculate_sin_cos(num_finesample_theta,num_finesample_phi,fine_thetaloc,fine_philoc,sintheta,costheta,sinphi,cosphi);
         omp_set_num_threads(num_threads);
         #pragma omp parallel if(parallel_omp_on) shared(disaggregation) private(temp_fine_theta,temp_fine_phi,\
                                                                                 temp_coarse_theta,temp_coarse_phi)
         {
+            workspace.prepare_team();
             double shiftvector[3];
             double khat[3]{0.0, 0.0, 0.0};
             double dotval;
@@ -428,10 +363,12 @@ void mvm_Zfardotx(complex<double> x[], complex<double> y[]){
 
             double timer_start = omp_get_wtime();
             double timer_total = 0.0;
-            temp_fine_theta=new complex<double> [num_finesample_theta*num_finesample_phi];
-            temp_fine_phi=new complex<double> [num_finesample_theta*num_finesample_phi];
-            temp_coarse_theta=new complex<double> [num_coarsesample_theta*num_coarsesample_phi];
-            temp_coarse_phi=new complex<double> [num_coarsesample_theta*num_coarsesample_phi];
+            auto& scratch = workspace.worker();
+            scratch.prepare(num_coarsesample_theta,num_coarsesample_phi,num_finesample_theta,num_finesample_phi);
+            temp_fine_theta = scratch.fine_theta.data();
+            temp_fine_phi = scratch.fine_phi.data();
+            temp_coarse_theta = scratch.coarse_theta.data();
+            temp_coarse_phi = scratch.coarse_phi.data();
             #pragma omp for  schedule(dynamic)
             for(int box_parent=box_start;box_parent<box_end;box_parent++){
                 double timer_in = omp_get_wtime();
@@ -467,8 +404,8 @@ void mvm_Zfardotx(complex<double> x[], complex<double> y[]){
                             ind_parent++;
                         }
                     }
-                    interpolation_f2c(num_coarsesample_theta,num_coarsesample_phi,num_finesample_theta,num_finesample_phi,num_interpol,indexloc_theta,indexloc_phi,inter_weights_theta,inter_weights_phi,temp_fine_theta,temp_coarse_theta);
-                    interpolation_f2c(num_coarsesample_theta,num_coarsesample_phi,num_finesample_theta,num_finesample_phi,num_interpol,indexloc_theta,indexloc_phi,inter_weights_theta,inter_weights_phi,temp_fine_phi,temp_coarse_phi);
+                    interpolation_f2c(num_coarsesample_theta,num_coarsesample_phi,num_finesample_theta,num_finesample_phi,num_interpol,indexloc_theta,indexloc_phi,inter_weights_theta,inter_weights_phi,temp_fine_theta,temp_coarse_theta,scratch.interpolation);
+                    interpolation_f2c(num_coarsesample_theta,num_coarsesample_phi,num_finesample_theta,num_finesample_phi,num_interpol,indexloc_theta,indexloc_phi,inter_weights_theta,inter_weights_phi,temp_fine_phi,temp_coarse_phi,scratch.interpolation);
                     long int ind_child=agg_index[box_child];
                     ind_temp=0;
                     for(int indtheta=0;indtheta<num_coarsesample_theta;indtheta++){
@@ -483,29 +420,10 @@ void mvm_Zfardotx(complex<double> x[], complex<double> y[]){
 
                 timer_total+=omp_get_wtime()-timer_in;
             }
-            delete[] temp_fine_theta;
-            delete[] temp_fine_phi;
-            delete[] temp_coarse_theta;
-            delete[] temp_coarse_phi;
+
             double timer_end = omp_get_wtime();
 //            fprintf(file_timer,"MVMFarDis%d %d %1.5f %1.5f \n", indlev, omp_get_thread_num(), timer_end-timer_start, timer_total );
         }
-        delete[] fine_thetaloc;
-        delete[] fine_thetawei;
-        delete[] fine_philoc;
-        delete[] fine_phiwei;
-        delete[] sintheta;
-        delete[] costheta;
-        delete[] sinphi;
-        delete[] cosphi;
-        delete[] coarse_thetaloc;
-        delete[] coarse_thetawei;
-        delete[] coarse_philoc;
-        delete[] coarse_phiwei;
-        delete[] inter_weights_theta;
-        delete[] indexloc_theta;
-        delete[] inter_weights_phi;
-        delete[] indexloc_phi;
     }
 
 
@@ -529,20 +447,10 @@ void mvm_Zfardotx(complex<double> x[], complex<double> y[]){
         int numberofterms=num_truncation[num_mlfmalevels-1];
         int numberofthetas=numberofterms+1;
         int numberofphis=numberofthetas*2;
-        double *thetalocations, *thetaweights;
-        double *philocations, *phiweights;
-        double *sintheta, *costheta, *sinphi, *cosphi;
-        thetalocations=new double[numberofthetas];
-        thetaweights=new double[numberofthetas];
-        philocations=new double[numberofphis];
-        phiweights=new double[numberofphis];
-        sintheta=new double[numberofthetas];
-        costheta=new double[numberofthetas];
-        sinphi=new double[numberofphis];
-        cosphi=new double[numberofphis];
-        theta_locations_weights(numberofthetas, thetaweights, thetalocations);
-        phi_locations_weights(numberofphis, phiweights, philocations);
-        calculate_sin_cos(numberofthetas,numberofphis, thetalocations, philocations, sintheta, costheta, sinphi, cosphi);
+        const double* sintheta = leaf_grid.sin_theta.data();
+        const double* costheta = leaf_grid.cos_theta.data();
+        const double* sinphi = leaf_grid.sin_phi.data();
+        const double* cosphi = leaf_grid.cos_phi.data();
         int testnode1,testnode2,testnode3;
         double testnode1loc[3],testnode2loc[3],testnode3loc[3],testlocation[3];
         double testlength,testsign,testvector[3],ncrosstestvector[3],testglobalnormal[3];
