@@ -1,6 +1,168 @@
 # Handoff
 
-## Current task: rank-7 shared angular tables and child shifts — implemented and validated
+## Current task: commit build and documentation work — default options retained
+
+Branch `main`, starting HEAD `0362fc027e8a9c856302fa9896f2b8db14b05ac0`. This handoff accompanies the
+user-requested commit of Makefile, README.md, .gitignore and development notes.
+Default `make` retains `-Wall -fexceptions -O3 -std=gnu++17 -fopenmp`, with
+`LTO=0`, empty `ARCH`/`TUNE`, and `PGO=off`; optional switches remain opt-in.
+No solver source or numerical setting changed. No new build/test/solver run
+needed in this commit-only follow-up; prior compilation and sphere23 comparison
+results are recorded below. No push authorized or performed.
+
+The pre-existing user edit in `src/test_23_sphere_0p01m.pnu` (181 -> 31 incident
+phi samples) is excluded and remains uncommitted. Preserve all artifacts.
+Commit-review records: `/tmp/mlfma-build-docs-commit.3v_uaw_b/`.
+Sphere comparison report: `/tmp/mlfma-options-sphere23.Lg5Hef/README.md`.
+Additional tests/repetitions still require approval; this commit request does
+not authorize pushing. No requested implementation or validation remains pending.
+
+## Previous task: sphere23 compiler-option comparison — complete
+
+Branch main, HEAD 0362fc0. The user explicitly requested this case; one measured
+run per default/LTO+tuning/LTO+native/PGO build plus one PGO training run completed
+sequentially, all eight-thread, on the unchanged user input (31 illuminations,
+preconditioner 2). No further performance runs or repetitions are authorized.
+Pre-existing user change: src/test_23_sphere_0p01m.pnu PW phi count 181 -> 31;
+preserve it separately from Makefile/docs edits. All 98 source/test/input hashes
+match the task-start manifest. No solver or numerical parameter edited.
+
+Confirmed full wall / peak RSS (includes setup, solves, output and cleanup):
+
+| Build | Wall s | Change | Peak RSS KiB |
+| --- | ---: | ---: | ---: |
+| Default O3 | 221.34 | baseline | 287864 |
+| LTO=2 TUNE=native | 222.72 | +0.62% | 287920 |
+| LTO=2 ARCH=native | 201.79 | -8.83% | 287852 |
+| PGO=use, default CPU flags | 238.18 | +7.61% | 287920 |
+
+Separate PGO training: 1430.57 s / 288192 KiB, same full input. Atomic profile
+updates are costly; this is excluded from optimized timings. One trial each,
+no statistical estimate or independent PGO training/generalization evidence.
+Combined LTO/native was fastest here; no isolated attribution to either option.
+
+All five runs exit 0, all 31 illuminations converge below unchanged 0.001.
+Per-angle statuses/iterations/products match (181 outer iterations, 243 products).
+All output comparisons pass unchanged 1e-12 relative L2; maximum coefficient
+relative difference 7.29e-14 (native), fields/triangle diagnostics byte-identical.
+LTO+tuning and PGO outputs byte-identical to default. Maximum physical residual
+about 9.93188384084108e-4. Broader suites NOT RUN, outside this case request.
+
+Focused supporting fix: Makefile recursively tracks .gcda profiles, including
+nested directories produced by absolute object paths; README documents this and
+avoids a stale fixed sweep count. Initial runner stopped at flat profile discovery
+after successful training; all 43 profiles intact. Corrected discovery and resumed
+only missing PGO-use build/run; no completed case repeated. Both PGO builds pass
+with 38 existing warnings, no missing/mismatched-profile diagnostics. All 43
+profiles tracked and unchanged after optimized execution. Incremental build
+preserves hashes/timestamps; profile-update dry-run selects all 43 objects plus
+link. Agent files pass whitespace review; existing input trailing space retained.
+
+Retain /tmp/mlfma-options-sphere23.Lg5Hef/: README.md (full report), summary.json,
+metadata.json, executed-commands.json (exact commands/environment), final-checks.json,
+analysis.log, runner/analyzer/report/check scripts, starting-files, five case
+directories with inputs/executables/logs/status/results/resources/memory samples,
+pgo-build and profiles (43 .gcda files), build logs and profile manifest.
+Commands: python3 -B <artifact>/run_comparison.py, then --resume-pgo only after
+harness correction; analyze_results.py; write_report.py; final_checks.py. Each
+solver call: /usr/bin/time -v -o resources.txt ./run_mlfma in its case directory.
+PGO builds use make -j2 PGO=generate/use with the same absolute pgo-build/TARGET/
+PROFILE_DIR paths; exact arrays are in command records. No artifacts deleted.
+
+All Makefile/README/.gitignore/development-note work remains uncommitted/unpushed.
+No requested validation remains pending. Extra cases/repetitions, independent
+training or broader tests require approval; commits/pushes require requests.
+Native executable portability is limited to compatible CPU features.
+
+## Previous task: optional compiler optimizations — implemented, build verified
+
+Branch `main`, HEAD `0362fc0`. User requested Makefile support for the suggested
+compiler optimizations. Pre-existing uncommitted work from this session is the
+new Makefile, rewritten README, .gitignore, and development notes below; preserved.
+This follow-up changes only Makefile, README.md, and the two development notes.
+All 98 source/test/input files remain unchanged. No commit or push authorized.
+
+Added opt-in GCC switches `LTO=2`, `TUNE=native`, `ARCH=native`, `PGO=generate/use`,
+and `PROFILE_DIR`; defaults remain `LTO=0`, no additional architecture/tuning,
+and `PGO=off`. Flags apply at compilation and linking and are part of the build
+configuration record. PGO generation uses atomic counters for OpenMP; profile
+use rejects missing/mismatched data and depends on existing `.gcda` files.
+Training is never automatic. `make help` and README document usage, separate
+build directories, profile lifecycle, portability, and rounding risks.
+No fast-math options added.
+
+Compilation/linking PASS with two compile jobs and at most two LTO jobs:
+
+- `make -j2`
+- `make -j2 LTO=2 TUNE=native BUILD_DIR=build/lto TARGET=build/lto/run_mlfma`
+- `make -j2 LTO=2 ARCH=native BUILD_DIR=build/native TARGET=build/native/run_mlfma`
+- `make -j2 PGO=generate BUILD_DIR=build/pgo TARGET=build/pgo/run_mlfma`
+
+GCC 11.4.0 / GNU Make 4.3; 38 existing warnings in every build, no additional
+LTO diagnostics. Default executable SHA-256 is unchanged:
+`7baace161bd48a263d32042668f5c97ea1633a962a2cf92bb4d1e9f53c27b354`.
+Unchanged repetitions of all four commands preserve hashes/timestamps and
+produce empty logs. Off/tuned/native switch changes rebuild a single main.o
+in `build/options-switch/`. A separate PGO-use main.o compilation without
+profiles fails as intended with `-Werror=missing-profile` (make exit 2).
+
+Numerical tests, solver timings, PGO training, and a successful profile-use build:
+NOT RUN. Training/validation/benchmark execution needs approval under AGENTS.md;
+no runtime benefit or numerical equivalence is claimed for the optional builds.
+Native CPU instructions/FMA may change rounding and reduce binary portability.
+
+Retain `/tmp/mlfma-build-options.nROib0/`: starting docs/build-file and old
+executables; source hashes; build logs and exact argument arrays; missing-profile
+diagnostic; incremental/option-switch logs; review/build summary JSON files.
+Root/default, `build/lto`, `build/native`, and `build/pgo` executables retained.
+No cleanup performed. Earlier `/tmp/mlfma-build-docs.zl8kd9/` remains intact.
+Next: review changes; optionally approve a bounded baseline/LTO/native numerical
+comparison and a separately scoped representative PGO training plan.
+All changes from both Makefile tasks remain uncommitted and unpushed.
+
+## Previous task: Makefile and user README — implemented, build verified
+
+Branch `main`, starting HEAD `0362fc0` (merged rank 7); working tree initially
+clean. User requested a proper Makefile and README explaining scope, compilation,
+and usage. Changes are limited to `Makefile` (new), `README.md`, `.gitignore`,
+and development notes. No solver, test, or input changes; all 98 source/test/input
+files match the recorded SHA-256 manifest. Changes remain uncommitted and
+unpushed; no new commit, push, test, or simulation authorization was requested.
+
+`make -j2` builds `run_mlfma`, preserving `-Wall -fexceptions -O3 -std=gnu++17
+-fopenmp`. Objects/dependencies/configuration are in `build/`; header dependencies
+and a content-compared configuration record support incremental rebuilds.
+Compiler, flags, source-list, build-directory, and target overrides are supported.
+`make help` documents targets; cleanup is explicit and was NOT RUN. Inputs,
+results, and logs are not removed by the clean recipe. Root executable and
+default build directory are ignored by Git.
+
+Builds completed: default release and documented debug command with two compile
+jobs, GCC 11.4.0 / GNU Make 4.3. Default release reports 38 existing warnings.
+An unchanged release build preserves every object/dependency/config/executable
+timestamp and hash; the debug no-change build invokes no compiler. A harmless
+CPPFLAGS marker on debug main.o was removed by the following debug build, which
+correctly recompiled it. Header dependency dry-run for `mlfma_workspace.h`
+selects its nine consumers and relinking, excluding unrelated objects.
+No solver executable was run. Numerical regressions/simulations: NOT RUN;
+fresh execution requires explicit approval under AGENTS.md. No numerical impact
+is expected because sources and default numerical/compiler settings are unchanged;
+compilation alone is not numerical validation.
+
+README covers PEC/CFIE/EFIE and open components, supported input modes, embedded
+mesh and units/indexing, OpenMP requests, preconditioners, far-field selectors,
+output conventions, physical residuals/status, and the modules in the solution
+path. Its run example copies the tracked smaller sphere into a unique /tmp
+directory; it was reviewed against code but NOT executed in this task.
+
+Retained artifacts: `/tmp/mlfma-build-docs.zl8kd9/` contains `build.log`, exact
+commands in `build-command.json` / `build-check-commands.json`, incremental
+snapshots, source manifest, header dry-run, debug logs, and `build-summary.json`.
+Root `run_mlfma`, `build/`, and `build/debug/run_mlfma` are also retained.
+Next step: review the five changed files; optionally authorize a bounded
+numerical smoke run or request a commit. Earlier artifacts below remain intact.
+
+## Previous task: rank-7 shared angular tables and child shifts — implemented and validated
 
 Branch `codex/fix_rank7`, starting HEAD `96eaa30277ada80b39777026b1ef293fd6c35095`.
 Initial working tree clean. This handoff accompanies the user-requested rank-7

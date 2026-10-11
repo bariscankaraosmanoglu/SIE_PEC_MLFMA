@@ -958,3 +958,247 @@
   weak-field phase digit differs while physical complex-field comparison passes.
 - Commit/push status: This entry accompanies the requested rank-7 commit. The
   resulting identifier is reported after creation; no push is authorized.
+
+### 2026-10-11 16:27 UTC — Add incremental Makefile and solver user documentation
+- User request and authorized scope: Add a proper Makefile and explain repository
+  scope, compilation, and use in README.md. Ordinary compilation is allowed by
+  AGENTS.md; no new tests, simulations, benchmarks, commits, or pushes requested.
+- Branch and starting HEAD: `main`, `0362fc0` (rank-7 merge), initially clean.
+- Files and functions changed: New root Makefile targets `all`, `run_mlfma`,
+  object/dependency/configuration rules, `help`, and explicit `clean`; rewritten
+  README.md; .gitignore adds `/build/` and `/run_mlfma`; HANDOFF.md current state.
+  No changes to solver functions, tests, numerical inputs, or agent policies.
+- Changes and rationale: Use per-translation-unit compilation with generated
+  `-MMD -MP` dependencies. A content-compared compiler/flags/source-list record
+  triggers rebuilds on configuration changes while preserving no-change outputs.
+  Preserve existing release flags, apply OpenMP at compilation and linking,
+  and support standard flags plus BUILD_DIR/TARGET overrides. Building never
+  runs simulations/tests. Clean only removes selected build products, is opt-in,
+  and was not executed. README explains PEC/CFIE/open-surface EFIE, supported
+  modes, embedded mesh, units/indexing, parallelism, parameter order, far-field
+  selectors, outputs, termination status, and source-module data flow.
+- Expected numerical impact: None. All 98 source/test/input files match SHA-256
+  snapshot; default options retain GNU C++17, O3, exceptions, Wall, and OpenMP.
+  No accuracy, precision, or solver setting changes. Compilation is not evidence
+  of numerical equivalence; no numerical comparison claimed for this task.
+- Validation plan: Compile release and documented debug configurations; inspect
+  generated dependencies and build configuration; check no-change output hashes/
+  timestamps and compiler-flag invalidation; dry-run a header-triggered rebuild;
+  review README against source, patch scope/whitespace, new Makefile separately.
+- Approval received and its scope: User authorized these implementation edits.
+  Compilation/linking allowed by AGENTS.md section 5. Earlier rank-7 numerical
+  approvals were not reused for this new scope. Tests/simulations NOT RUN.
+- Commands actually executed: Read-only Git status/log/diff, file/source inspection,
+  `make --version`, `g++ --version`, `make help`, `make -j2` (release and unchanged
+  repeat), `make -n -o build/build-config.txt -W src/mlfma_workspace.h`,
+  `make BUILD_DIR=build/debug TARGET=build/debug/run_mlfma CXXFLAGS='-Wall
+  -fexceptions -O0 -g -std=gnu++17' CPPFLAGS=-DMLFMA_BUILD_CONFIGURATION_CHECK=1
+  build/debug/main.o`, then `make -j2 BUILD_DIR=build/debug
+  TARGET=build/debug/run_mlfma CXXFLAGS='-Wall -fexceptions -O0 -g -std=gnu++17'`
+  and unchanged repeat. Exact argument arrays retained in build-check-commands.json.
+  Python standard-library wrappers captured build logs and SHA-256/timestamp
+  snapshots; no test runner or solver executable was invoked. `git diff --check`
+  and final local documentation/scope review performed.
+- Build outcome: PASS, GCC 11.4.0 / GNU Make 4.3, two parallel compile jobs.
+  Release build has 38 existing source warnings. Unchanged release build preserves
+  all 88 build-product timestamps/hashes (43 objects, 43 dependencies, config,
+  executable). Removing the harmless debug CPPFLAGS marker recompiles main.o.
+  Debug no-change build has empty log (no compiler/link invocation). Header dry
+  run selects nine workspace-header consumers plus relink, not unrelated objects.
+- Test outcome: NOT RUN — numerical tests/simulations require fresh approval under
+  AGENTS.md. README run example reviewed against parser/stages, not executed.
+- Measurements and output locations: No solver runtime/RSS measurements performed.
+  Retain root `run_mlfma`, `build/` release objects and `build/debug/` debug objects/
+  executable. Logs, command arrays, source manifest, incremental before/after
+  snapshots, dependency dry-run, and build-summary.json retained at
+  `/tmp/mlfma-build-docs.zl8kd9/`. No previous artifacts deleted.
+- Remaining uncertainty or pending work: New Makefile binaries have not been
+  numerically exercised. Existing source warnings remain. The default numerical
+  method and settings are unchanged; no new performance claim made.
+- Commit/push status: Uncommitted and unpushed; neither operation authorized.
+
+### 2026-10-11 16:40 UTC — Expose optional LTO, CPU tuning, and PGO build switches
+- User request and authorized scope: Include the previously discussed compiler
+  optimization options in the Makefile. Add opt-in build switches and usage
+  documentation; ordinary compilation/linking allowed, no solver/test/training
+  execution or benchmark, commit, or push authorization.
+- Branch and starting HEAD: `main`, `0362fc0`. Prior Makefile/README/.gitignore/
+  development-note changes from this session were already uncommitted; preserved.
+- Files and functions changed: Makefile optimization flags, configuration record,
+  profile-data dependencies, compile/link recipes, and help; README.md optional
+  compiler-optimization section; HANDOFF.md current state; this appended entry.
+  No solver functions, inputs, tests, or agent policies changed.
+- Changes and rationale: Add `LTO` (0 off; 2 bounds LTO compiler jobs), `ARCH`,
+  `TUNE`, `PGO=off|generate|use`, and absolute `PROFILE_DIR` (default under chosen
+  BUILD_DIR). Apply derived flags to compilation and linking; track their content
+  to invalidate old objects on changes. Atomic profile updates support OpenMP.
+  PGO-use missing/mismatched data are compilation errors. Existing profile files
+  are object prerequisites and the profile list is tracked, so new/updated
+  training data triggers recompilation. Training remains a separate manual stage;
+  no target executes the solver. Profile data and artifacts survive clean.
+- Expected numerical impact: Default executable is byte-identical to the previous
+  build; default options unchanged. Optional native/FMA instructions and compiler
+  optimization may change rounding, requiring numerical checks before adoption.
+  No fast-math or Ofast options introduced. PGO benefit depends on representative
+  training; no speedup or numerical equivalence claimed for optional builds.
+- Validation plan: Compile/link default, LTO+tuning, LTO+native, and PGO-generation
+  builds; repeat to inspect no-change behavior; change optimization switches on
+  main.o; compile with absent PGO data to verify refusal; inspect option recipes,
+  docs, source hashes, whitespace and diff scope. Profile-use success requires
+  future representative training and is not included in compile-only evidence.
+- Approval received and its scope: User authorized implementation. AGENTS.md
+  permits compilation/linking. No new numerical, performance, or training
+  approval requested or inferred from prior solver work.
+- Commands actually executed: Read-only Git/source/docs inspection; `make help`;
+  `make -j2`; `make -j2 LTO=2 TUNE=native BUILD_DIR=build/lto
+  TARGET=build/lto/run_mlfma`; `make -j2 LTO=2 ARCH=native BUILD_DIR=build/native
+  TARGET=build/native/run_mlfma`; `make -j2 PGO=generate BUILD_DIR=build/pgo
+  TARGET=build/pgo/run_mlfma`; unchanged repeats of those four builds. Compiled
+  `build/options-switch/main.o` with options off, LTO+tuning, then LTO+native.
+  Compiled a separate main.o with PGO=use and an absent PROFILE_DIR, expecting
+  a missing-profile error. Exact argument arrays and exit codes retained in
+  build-commands.json, incremental-commands.json, missing-profile-build.json.
+  Python captured logs/hashes and reviewed local README links and shell examples
+  with `bash -n` (examples not executed); `git diff --check` and separate new
+  Makefile review. Official GCC 11.4.0 optimization/x86/instrumentation docs
+  consulted read-only; no source/input upload or dependency installation.
+- Build outcome: All four full builds PASS, GCC 11.4.0 / GNU Make 4.3, two compile
+  jobs and LTO=2 where enabled. Each build reports the same 38 existing warnings;
+  no new LTO diagnostics. All four unchanged builds preserve output hashes and
+  timestamps with empty logs. Optimization-switch changes rebuild main.o.
+  PGO-use missing-data compilation correctly fails (make exit 2,
+  `-Werror=missing-profile`). Default executable SHA-256 before/after:
+  `7baace161bd48a263d32042668f5c97ea1633a962a2cf92bb4d1e9f53c27b354`.
+  All 98 source/test/input hashes unchanged.
+- Test outcome: NOT RUN — no unit/numerical tests, solver runs, benchmarks, or PGO
+  training performed. Successful PGO-use build remains pending collected data;
+  missing-data refusal is compile evidence only. No solver accuracy claim.
+- Measurements and output locations: No solver runtime/RSS measurements.
+  Retain default run_mlfma and build/lto, build/native, build/pgo executables/
+  objects. Retain `/tmp/mlfma-build-options.nROib0/` containing starting file/
+  executable copies, source manifest, build/diagnostic/incremental logs, command
+  arrays, review-summary.json and build-summary.json. Earlier artifacts retained;
+  no clean/remove commands executed.
+- Remaining uncertainty or pending work: Numerical/performance comparisons and
+  representative PGO training require explicit approval under AGENTS.md. Native
+  binaries may need newer CPU features and alter rounding. No claim of improved
+  throughput, reduced RSS, or scaling to more cores without measurements.
+- Commit/push status: All Makefile/documentation changes remain uncommitted and
+  unpushed; neither operation requested.
+
+### 2026-10-11 17:29 UTC — Compare Makefile compiler options on sphere23
+- User request and authorized scope: Test performance of the new Makefile options
+  on src/test_23_sphere_0p01m.pnu and show before/after. Explicit case request
+  authorizes the stated bounded plan: one sequential measured run each of default,
+  LTO+tuning, LTO+native, and PGO, plus one separate full PGO training run on the
+  same unchanged input. No additional cases or solver repetitions performed.
+- Branch and starting HEAD: main, 0362fc027e8a9c856302fa9896f2b8db14b05ac0.
+  Existing Makefile/README/.gitignore/development-note edits preserved. The user
+  had changed the sphere PW phi count from 181 to 31 before this task; preserved,
+  including existing trailing space/CRLF. All 98 current source/test/input hashes
+  remain unchanged throughout this comparison.
+- Files and functions changed: Makefile profile_files/PROFILE_DATA discovery;
+  README.md profile-directory explanation and sweep description; this appended
+  entry and HANDOFF.md current-state section. No solver function or input edited.
+- Changes and rationale: GCC profiles for absolute object paths were nested,
+  while the previous Makefile wildcard and initial runner searched only the top
+  level. Track .gcda files recursively with GNU Make wildcard recursion, covering
+  flat and nested layouts without shell directory walks. The runner stopped
+  after successful training at its profile-discovery assertion; all 43 profiles
+  were intact. Correct discovery and resume only the missing PGO-use build/run;
+  no completed case or training run repeated. Retain every artifact.
+- Expected numerical impact: No numerical source/settings changes. All builds
+  preserve O3/GNU C++17/OpenMP and avoid fast-math/Ofast. Native instructions can
+  change rounding; comparisons below quantify observed differences for this case.
+- Validation plan: Same input, eight observed/requested OpenMP workers, sequential
+  full-process timings, /usr/bin/time peak RSS; compare status/iterations/products,
+  residuals, final RWG/triangle diagnostics and all monostatic fields against the
+  default using existing 1e-12 relative-L2 and input 0.001 convergence thresholds.
+  Verify all source/input/binary hashes, PGO profile dependencies and no-op rebuild.
+- Approval received and its scope: Explicit user request for this sphere comparison;
+  bounded plan stated before execution. Previous Makefile implementation authority
+  covers its focused profile-dependency fix. No commit/push requested.
+- Commands actually executed: python3 -B /tmp/mlfma-options-sphere23.Lg5Hef/run_comparison.py;
+  after discovery correction, the same runner with --resume-pgo; analyzer
+  analyze_results.py, report generator write_report.py, and final_checks.py in
+  that directory. Each of five solver invocations used
+  /usr/bin/time -v -o resources.txt ./run_mlfma in its separate case directory,
+  OMP_DYNAMIC=FALSE and OMP_NUM_THREADS=8, thread limit/profile redirects unset.
+  PGO generation/use: make -j2 PGO=generate (then PGO=use), both with
+  BUILD_DIR=/tmp/mlfma-options-sphere23.Lg5Hef/pgo-build,
+  TARGET=/tmp/mlfma-options-sphere23.Lg5Hef/pgo-build/run_mlfma,
+  PROFILE_DIR=/tmp/mlfma-options-sphere23.Lg5Hef/profiles.
+  Default/LTO/native existing verified binaries were reused, not rebuilt during
+  timings. Exact commands/environment/exits in executed-commands.json; no-op and
+  profile-dependency make -n -o <config> -W <nested gcda> commands in final-checks.json.
+  Git scope review and agent-file diff --check performed. An initial all-files
+  whitespace check flagged the pre-existing user input trailing space; it was
+  preserved, and agent-owned tracked files plus untracked Makefile pass review.
+- Build outcome: PGO generation and use both PASS with GCC 11.4.0, two compile
+  jobs, 38 existing warnings each, no missing/mismatched profile diagnostics.
+  43 nested profiles tracked. Unchanged PGO-use rebuild preserves all hashes/
+  timestamps; dependency dry-run selects 43 recompilations plus linking for an
+  updated nested profile. Profiles unchanged after optimized execution.
+- Test outcome: PASS for all five completed runs: exit 0, 31 illuminations
+  converged, identical per-angle statuses/outer iterations/products (181 / 243
+  totals), maximum physical residual about 0.000993188384084108 < 0.001.
+  LTO+tuning, PGO training, and PGO-use numerical outputs byte-identical to
+  default. Native coefficient relative L2 7.293887186614182e-14 (< 1e-12), maximum
+  physical-residual difference 4.9764879717084654e-17; triangle diagnostics and
+  all 31 monostatic fields byte-identical. Broader regression suites NOT RUN,
+  outside this bounded comparison; no tolerance or reference data changed.
+- Measurements and output locations: 12,531 points, 25,058 triangles, 37,587 RWGs,
+  3 GHz, CFIE 0.5, mode 2, six levels, digits/interpolation 2, approximation 0.3,
+  tolerance 0.001, limits 100/10, 31 theta=90/phi=0..360 illuminations, dir_ff=0.
+  Intel i7-7700HQ, four physical/eight logical CPUs, eight workers; full process
+  includes setup/assembly/solves/fields/output/cleanup, excludes compilation/training.
+  Default: wall 221.34 s, solution 220.200087 s, RSS 287864 KiB.
+  LTO=2 TUNE=native: 222.72 s (+0.62%), 221.684259 s, 287920 KiB (+56).
+  LTO=2 ARCH=native: 201.79 s (-8.83%), 200.827940 s, 287852 KiB (-12).
+  PGO-use/default CPU flags: 238.18 s (+7.61%), 237.053486 s, 287920 KiB (+56).
+  Separate PGO training: 1430.57 s, solution 1422.750315 s, RSS 288192 KiB.
+  Retain /tmp/mlfma-options-sphere23.Lg5Hef/README.md, summary.json, metadata.json,
+  analysis.log, all case inputs/executables/results/status/logs/resources/samples,
+  training profiles, builds, manifests, command records, and starting-file copies.
+  No artifacts deleted; earlier Makefile build artifacts retained as well.
+- Remaining uncertainty or pending work: One trial per build, no statistical
+  confidence or isolation of ARCH versus LTO effects. PGO trained on the same
+  measured case and did not help; slowdown cause unprofiled. Atomic training
+  counters add substantial overhead. No independent geometry/CPU/scaling claim.
+  Requested checks complete; additional cases/repetitions need approval.
+- Commit/push status: All Makefile/documentation changes remain uncommitted and
+  unpushed. User input edits remain separate and untouched.
+
+### 2026-10-11 19:10 UTC — Commit build and documentation work with default options
+- User request and authorized scope: Leave the Makefile using default build
+  options and commit this session's build/documentation changes on the current
+  branch. Optional optimizations remain explicit opt-ins. No push requested.
+- Branch and starting HEAD: main, 0362fc027e8a9c856302fa9896f2b8db14b05ac0.
+- Files and functions changed: Commit Makefile, README.md, .gitignore,
+  CHANGELOG_DEV.md, and HANDOFF.md. No solver functions or input files changed.
+- Changes and rationale: Confirm default flags -Wall -fexceptions -O3
+  -std=gnu++17 -fopenmp; LTO=0, empty ARCH/TUNE, PGO=off. No further Makefile
+  change necessary. Include incremental builds, optional flags/profile tracking,
+  usage/scope documentation and earlier validation evidence in the commit.
+- Expected numerical impact: None from this commit preparation. Defaults and
+  numerical sources/settings remain unchanged.
+- Validation plan: Inspect default settings, staged diff, file scope, and hooks;
+  verify the user's sphere input hash is preserved and excluded from staging.
+- Approval received and its scope: User explicitly requested this commit.
+  No new simulations, benchmarks, or test execution authorized or performed.
+- Commands actually executed: Read-only Git/config/hooks inspection; Python
+  default-setting and input-hash checks; git diff --check limited to committed
+  files; git add for the five named files; staged diff inspection; git commit
+  with a build/documentation message; final Git status and commit inspection.
+- Build outcome: Previously completed default/LTO/native/PGO builds passed;
+  no rebuild needed for unchanged build defaults. See preceding entries.
+- Test outcome: NOT RUN in this commit-only follow-up. Previously approved
+  sphere23 comparison passed for all options at existing numerical tolerances;
+  results remain at /tmp/mlfma-options-sphere23.Lg5Hef/.
+- Measurements and output locations: No new performance runs; preserve all prior
+  artifacts. Commit review records: /tmp/mlfma-build-docs-commit.3v_uaw_b/.
+- Remaining uncertainty or pending work: Single-trial performance limitations
+  remain as previously recorded. The user-edited sphere input (31 illuminations)
+  stays uncommitted; do not stage it with build/documentation work.
+- Commit/push status: This entry accompanies the requested commit of the five
+  named files. No push authorized or performed.
