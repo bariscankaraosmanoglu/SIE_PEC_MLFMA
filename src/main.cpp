@@ -1,3 +1,6 @@
+// Copyright (c) 2026 Bariscan Karaosmanoglu, PhD
+// SPDX-License-Identifier: MIT
+
 #include "main.h"
 
 int main()

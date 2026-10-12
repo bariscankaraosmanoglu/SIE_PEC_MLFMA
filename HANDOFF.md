@@ -1,6 +1,33 @@
 # Handoff
 
-## Current task: commit build and documentation work — default options retained
+## Current task: MIT license and author attribution — ready for requested commit
+
+Branch `main`, starting HEAD `966fea55dbe3833db99cf688becd2ce637e77896`.
+Working tree was clean before licensing; pending license/docs changes from that
+task are preserved. User subsequently supplied the name Bariscan Karaosmanoglu,
+PhD. Root `LICENSE` now uses that exact name for copyright 2026; README names
+the author, and `src/main.cpp` has a copyright/SPDX comment header. Standard MIT
+text and README license section/link retained. Existing `src/times.hpp` notice attributes
+copyright to Mehmet Nuri and reserves rights; preserved without relicensing
+that material. README explicitly limits the project grant accordingly.
+Permission to distribute that separately attributed header under MIT has not
+been established; no claim of repository-wide third-party clearance is made.
+
+Only LICENSE, README.md, src/main.cpp, CHANGELOG_DEV.md, and HANDOFF.md changed.
+Source changes are comments only; original main.cpp bytes/CRLF remain intact
+after the new header. No executable code, input, build settings, or numerical
+behavior changed. Reviewed license, author spelling, README link, notices,
+diff scope and whitespace. Builds/tests NOT RUN:
+attribution/documentation-only change; no numerical validation needed. No new runtime
+test approval requested or required for this scope. Default build remains
+`make -j2`; previously approved sphere comparison is recorded below.
+All prior artifacts retained. User requested committing these five files on
+main; this handoff accompanies that commit. Staged scope and CRLF-aware whitespace
+checks reviewed; original solver body and other authors' notices unchanged.
+No push authorized or performed. No remaining implementation/validation work
+for this attribution change. See CHANGELOG_DEV.md for these logical work items.
+
+## Previous task: commit build and documentation work — default options retained
 
 Branch `main`, starting HEAD `0362fc027e8a9c856302fa9896f2b8db14b05ac0`. This handoff accompanies the
 user-requested commit of Makefile, README.md, .gitignore and development notes.

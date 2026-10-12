@@ -1202,3 +1202,92 @@
   stays uncommitted; do not stage it with build/documentation work.
 - Commit/push status: This entry accompanies the requested commit of the five
   named files. No push authorized or performed.
+
+### 2026-10-12 20:23 UTC — Add MIT license and README licensing information
+- User request and authorized scope: Add MIT licensing to the repository;
+  license/documentation edits only. No commit, push, build, or test requested.
+- Branch and starting HEAD: main, 966fea55dbe3833db99cf688becd2ce637e77896.
+  Working tree initially clean; no pre-existing user changes observed.
+- Files and functions changed: New root LICENSE; README.md license section;
+  HANDOFF.md current state; this appended entry. No functions changed.
+- Changes and rationale: Add standard MIT text with copyright 2026 and the
+  repository Git author name bariscankaraosmanoglu; link from README. Preserve
+  the existing Mehmet Nuri copyright/all-rights-reserved notice in src/times.hpp.
+  README limits the project license to project-owned material and does not
+  purport to grant permissions for that separately attributed header.
+- Expected numerical impact: None; solver sources, input files, compiler
+  options, and numerical methods unchanged.
+- Validation plan: Review complete new license and README link; inspect all
+  diffs, check whitespace, and confirm only four intended files changed.
+- Approval received and its scope: User authorized adding MIT licensing.
+  No new runtime test, commit, push, or external publication authorization.
+- Commands actually executed: Read-only Git branch/status/HEAD/author-history
+  inspection; rg file/notice searches; reads of AGENTS.md, README.md, development
+  notes and src/times.hpp; Python path/symlink checks; apply_patch edits;
+  git diff --check, git diff and separate LICENSE inspection, final Git status.
+- Build outcome: NOT RUN — license/documentation-only change, build unchanged.
+- Test outcome: NOT RUN — no numerical impact or runtime validation needed
+  for this scope; no solver or test script executed.
+- Measurements and output locations: No performance measurements; LICENSE,
+  README.md, and development notes in repository root. Prior artifacts retained.
+- Remaining uncertainty or pending work: Permission to distribute src/times.hpp
+  under MIT is not established by its current notice; it is preserved and
+  explicitly excluded from the project-owned license grant. Review requested
+  files; additional licensing decisions need author/rights-holder information.
+- Commit/push status: Uncommitted and unpushed; neither operation requested.
+
+### 2026-10-12 20:27 UTC — Use the author's supplied full name
+- User request and authorized scope: Update relevant code and license attribution
+  to the supplied name, Bariscan Karaosmanoglu, PhD. Preserve pending MIT work.
+- Branch and starting HEAD: main, 966fea55dbe3833db99cf688becd2ce637e77896.
+  Pre-existing uncommitted LICENSE/README/development-note changes retained.
+- Files and functions changed: LICENSE copyright line; README.md author line;
+  src/main.cpp comment header; HANDOFF.md current attribution/state; this entry.
+  No function bodies changed.
+- Changes and rationale: Replace the Git handle with the exact supplied name in
+  the license. Add matching README attribution and a copyright/SPDX MIT header
+  at the solver entry point. Preserve main.cpp's original contents and CRLF.
+  Preserve other authors' notices, Git identity/history, and historical log text.
+- Expected numerical impact: None; source edits are comments only.
+- Validation plan: Inspect author spelling/attribution, new license and diffs;
+  compare main.cpp after the header byte-for-byte with HEAD; check whitespace.
+- Approval received and its scope: User authorized attribution edits. No runtime
+  tests, benchmarks, build, commit, or push requested.
+- Commands actually executed: Git status/HEAD inspection; rg attribution searches;
+  reads of relevant license/docs/main.cpp; Python path and CRLF-preserving edit;
+  apply_patch; Git diff/whitespace checks; Python original-body comparison.
+- Build outcome: NOT RUN — comments/documentation only, build behavior unchanged.
+- Test outcome: NOT RUN — no executable or numerical change requiring validation.
+- Measurements and output locations: No new measurements or temporary artifacts;
+  attribution in LICENSE, README.md and src/main.cpp, notes in repository root.
+- Remaining uncertainty or pending work: Existing src/times.hpp third-party
+  notice and license exception remain as documented in the licensing entry.
+- Commit/push status: All licensing/attribution changes uncommitted and unpushed;
+  neither operation requested.
+
+### 2026-10-12 20:31 UTC — Commit MIT licensing and author attribution
+- User request and authorized scope: Commit the pending MIT license and supplied
+  author-name updates on the current branch; no push requested.
+- Branch and starting HEAD: main, 966fea55dbe3833db99cf688becd2ce637e77896.
+- Files and functions changed: LICENSE, README.md, src/main.cpp comment header,
+  CHANGELOG_DEV.md and HANDOFF.md. No function bodies changed.
+- Changes and rationale: Commit standard MIT licensing for project-owned material
+  and attribution to Bariscan Karaosmanoglu, PhD; preserve the separately attributed
+  src/times.hpp notice and README exception. Update current commit status.
+- Expected numerical impact: None; executable code and settings unchanged.
+- Validation plan: Inspect staged diff/scope and hooks; check whitespace with
+  cr-at-eol for the existing CRLF source; verify unchanged original main.cpp body.
+- Approval received and its scope: Explicit user request to commit these changes.
+  No new build, runtime test, simulation, benchmark, or push requested.
+- Commands actually executed: Git status/log/diff/config/hooks inspection; reads
+  of LICENSE, README/source and notes; Python original-body/notice checks;
+  git add of five named files; CRLF-aware staged diff --check and staged review;
+  git commit; final commit/status inspection. Default whitespace check flags
+  retained CRLF as trailing whitespace; CRLF-aware check passes.
+- Build outcome: NOT RUN — source changes are comments only.
+- Test outcome: NOT RUN — no executable behavior or numerical settings changed.
+- Measurements and output locations: No new measurements; prior artifacts retained.
+- Remaining uncertainty or pending work: Third-party licensing exception for
+  src/times.hpp remains documented; no further validation needed for attribution.
+- Commit/push status: This entry accompanies the user-requested commit of the
+  five files above. No push authorized or performed.

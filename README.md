@@ -7,6 +7,8 @@ matrix-vector products with the Multilevel Fast Multipole Algorithm (MLFMA).
 Outputs include surface-current coefficients, triangle-current magnitudes,
 scattered far fields, and convergence diagnostics.
 
+Author: **Bariscan Karaosmanoglu, PhD**.
+
 ## Scope
 
 - Closed PEC surfaces support a combined-field integral equation (CFIE), with
@@ -325,3 +327,10 @@ requirements before an agent executes tests, simulations, or benchmarks.
 
 [CHANGELOG_DEV.md](CHANGELOG_DEV.md) records development and validation history;
 [HANDOFF.md](HANDOFF.md) records the current task state and retained artifacts.
+
+## License
+
+Project-owned code and documentation are licensed under the [MIT License](LICENSE).
+`src/times.hpp` retains its existing copyright notice for Mehmet Nuri; the
+project license does not override third-party rights or grant permissions for
+that separately attributed material.
